@@ -8,10 +8,14 @@ authors = [
 ]
 requires-python = ">=3.14"
 dependencies = [
-    "langchain>=1.4.0",
+    "fastmcp>=4.0.3",
+    "langchain[mcp]>=1.4.0",
+    "langchain-community>=0.4.2",
+    "langchain-google-genai>=4.4.0",
     "langgraph>=1.2.11",
+    "mcp>=2.2.0",
     "numpy>=2.5.2",
-    "sentence-transformers>=6.0.1",
+    "pypdf>=6.18.0",
 ]
 
 [project.scripts]
