@@ -9,7 +9,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 
 async def main():
 
-    local_server = Client(Path("./File_system_server.py"))
+    local_server = Client(Path("/home/naeemmubarak/Desktop/Agentic-RAG/mcp_server/File_system_server.py"))
 
     async with MCPAdapter(local_server) as adapter:
         tools = await adapter.list_tools()
@@ -29,6 +29,7 @@ async def main():
         })
 
     content = response["messages"][-1].content
+    print("="*100)
     print(content[0]['text'])
 
 
