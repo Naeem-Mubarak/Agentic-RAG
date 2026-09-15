@@ -1,7 +1,6 @@
 import os
-from langchain_classic.document_loaders import PyPDFLoader
+from langchain_community.document_loaders import PyMuPDFLoader
 from fastmcp import FastMCP
-
 
 mcp = FastMCP(name = "File System")
 
@@ -43,11 +42,18 @@ def load_docs(path: str, pdf_docs : list[str] = None) -> list:
         pdf_docs_object = []
         for document in pdf_docs:
             doc_path =  os.path.join(path, document)
-            loader = PyPDFLoader(file_path=doc_path)
+            loader = PyMuPDFLoader(
+                file_path=doc_path,
+                extract_images=True,
+                extract_tables='markdown')
             docs = loader.load()
             pdf_docs_object.append(docs)
 
         return pdf_docs_object
 
     return []
-    
+
+
+if __name__ == '__main__':
+
+    mcp.run()
