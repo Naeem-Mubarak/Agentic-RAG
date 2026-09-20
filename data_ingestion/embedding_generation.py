@@ -1,17 +1,20 @@
 from dotenv import load_dotenv
 import os
-from sentence_transformers import SentenceTransformer
 load_dotenv()
 from huggingface_hub import InferenceClient
+from google import genai
+from google.genai import types
 
 
-def embedding_generation(text):
+
+def embedding_generation(texts):
 
     """
     downloading Qwen 0.6B model for creating embeddings 
     """
+    model_used = ''
 
-    if not text:
+    if not texts:
         raise ValueError("Text can't be empty")
 
     hf_token = os.getenv("HF_TOKEN")
@@ -19,35 +22,60 @@ def embedding_generation(text):
     if hf_token:
 
         try:
+
+            # using one of the best opensoruce embedding models (Using the free tier) if it reaches it's limit then will download one of it's variant given below
             client = InferenceClient(token = hf_token)
             embedding = client.feature_extraction(
-                text=text,
-                model="Qwen/Qwen3-Embedding-8B"
+                text=texts,
+                model="Qwen/Qwen3-Embedding-8B",
+                dimensions = 2000
             )
+            model_used = 'HF'
+            return embedding, model_used
 
-            return embedding
-
-        except Exception:
+        except Exception as e:
             pass
+            # raise ValueError(f"Some unknown error occured during embedding generation \n Error Details : {e}")
 
     try:
 
-        model = SentenceTransformer(
-            "Qwen/Qwen3-Embedding-0.6B",
-            token = os.getenv("HF_TOKEN")
+        client = genai.Client()
+        result = client.models.embed_content(
+            model="gemini-embedding-001",
+            contents=texts,
+            config=types.EmbedContentConfig(
+                task_type="RETRIEVAL_QUERY",
+                output_dimensionality = 2000
+            )
         )
-        embedding = model.encode(text)
+        model_used = 'gemini'
 
-        return embedding
+        print("Embedding generated successfully")
 
+        return result, model_used
+    
     except Exception as e:
+    
+        raise ValueError(f"Fail to create embeddings \n Error Details: {e}")
 
-       raise ValueError(f"Fail to create embeddings \n Error Details: {e}")
+    # try:
+
+    #     model = SentenceTransformer(
+    #         "Qwen/Qwen3-Embedding-0.6B",
+    #         token = os.getenv("HF_TOKEN")
+    #     )
+    #     embedding = model.encode(text)
+
+    #     return embedding
+
+    # except Exception as e:
+
+    #    raise ValueError(f"Fail to create embeddings \n Error Details: {e}")
         
 
     
 
-def embedding_chunks(chunks):
+def embedding_chunks(chunks, batch_size : int = 50):
 
 
     """
@@ -57,23 +85,40 @@ def embedding_chunks(chunks):
     2. embedding
     3. metadata
     """
+    
+    # isolating the page content and metadata
+    page_contents = [doc.page_content for doc in chunks]
+    metadata = [doc.metadata for doc in chunks]
 
-    chunks_with_embeeding = []
+    # creating batches of page_content
+    batches = [page_contents[i:i+batch_size] for i in range(0, len(page_contents), batch_size)]
 
-    content = []
-    for chunk in chunks:
-        content.append(chunk.page_content)
 
-    embedding = embedding_generation(content)
+    # looping through every batch and then create it's embedding and then isolating embedding of each content from it's batch
+    final_embeddings = []
+    for batch in batches:
+        result, model_used = embedding_generation(batch)
+        if model_used == 'gemini':
 
-    for index,chunk in enumerate(chunks,start=0):
-        chunks_with_embeeding.append({
-            "page_content" : chunk.page_content,
-            "embeddings" : embedding[index],
-            "metadata" : chunk.metadata
+            batch_embeddings = [e.values for e in result.embeddings]
+            for embed in batch_embeddings:
+                final_embeddings.append(embed)
+        else:
+            for embed in result:
+                final_embeddings.append(embed)
+
+    
+    chunks_with_embedding = []
+
+    # final schema in which every content is isolated from other's with it's embeddings and metadata 
+    for i in range(len(page_contents)):
+        chunks_with_embedding.append({
+            "page_content" : page_contents[i],
+            "embeddings" : final_embeddings[i],
+            "metadata" : metadata[i]
         })
 
 
-    return chunks_with_embeeding
+    return chunks_with_embedding
 
 
