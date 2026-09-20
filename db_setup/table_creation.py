@@ -1,10 +1,8 @@
-from config.config import db_connection, DB_CONNECTION_URL
+from config.config import db_connection, DB_CONNECTION_URL, POSTGRES_ADMIN_URL, DB_NAME
 from psycopg2 import sql
+from urllib.parse import urlparse, urlunparse
 
-conn, cursor = db_connection(DB_CONNECTION_URL)
-
-
-def table_creation(table_name: str):
+def table_creation(table_name: str, DB_NAME : str = DB_NAME):
 
     """Table to store data in the database
     1. ID : unique id
@@ -18,12 +16,42 @@ def table_creation(table_name: str):
     if not table_name:
         raise ValueError("Provide the name of your table")
 
+    # admin connection required to activate extension so giving the right url including db_name where to activate extension
+    parsed = urlparse(POSTGRES_ADMIN_URL)
+    admin_url = urlunparse((
+        parsed.scheme,
+        parsed.netloc,
+        f"/{DB_NAME}",
+        parsed.params,
+        parsed.query,
+        parsed.fragment
+    ))
+
+
+    admin_conn , admin_cursor = db_connection(admin_url)
+    try:
+
+        admin_cursor.execute("""CREATE EXTENSION IF NOT EXISTS vector""")
+        print("vector extension activated")
+
+    except Exception as e:
+
+        return print(f"Some unexpected error occured during extension activation \n Error Detail : {e}")
+
+    finally:
+
+        admin_conn.close()
+        admin_cursor.close()
+
+    # user connection for creating table in it's DB
+    conn, cursor = db_connection(DB_CONNECTION_URL)
+
     try:
 
         cursor.execute(sql.SQL("""
             CREATE TABLE {}(
             id BIGSERIAL PRIMARY KEY,
-            embeddings vector(4096) NOT NULL,
+            embeddings vector(2000) NOT NULL,
             page_content TEXT NOT NULL,
             metadata JSONB,
             page_number INTEGER,
@@ -36,6 +64,7 @@ def table_creation(table_name: str):
     except Exception as e:
         raise ValueError(f"Some Error is occured during table creation \n Error Details: {e}")
 
+    finally:
 
-
-table_creation("RAG_docs")
+        cursor.close()
+        conn.close()
