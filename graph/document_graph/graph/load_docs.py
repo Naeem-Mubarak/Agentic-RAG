@@ -10,7 +10,8 @@ from pathlib import Path
 from fastmcp import Client
 from graph.document_graph.graph.helper_function_for_text_extraction import extract_text
 from graph.states.states import Agent_state
-from config.config import db_connection, DB_CONNECTION_URL
+from config.config import db_connection, DB_CONNECTION_URL, TABLE_NAME
+from psycopg2 import sql
 
 # model to do reasoning
 listing_load_model = general_model()
@@ -62,7 +63,9 @@ async def load_docs(state: Agent_state):
     
     state['selected_docs'] = selection.pdf_docs
 
-    cursor.execute("""SELECT DISTINCT document_name FROM rag_docs """)
+    cursor.execute(
+        sql.SQL("""SELECT DISTINCT document_name FROM {}""").format(sql.Identifier(TABLE_NAME))
+        )
     docs = cursor.fetchall()
     docs_in_db = [doc[0] for doc in docs] # decoupling and converting into list
 
