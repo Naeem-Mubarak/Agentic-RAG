@@ -18,28 +18,16 @@ async def relevent(state: Agent_state):
         ("human","Query: {query} \n docs: {docs}")
     ])
 
-    # parser = StrOutputParser()
+    parser = StrOutputParser()
 
-    chain = prompt | model 
+    chain = prompt | model | parser
 
-    # response = chain.invoke({
-    #     "query" : state['query'],
-    #     "docs" : state['filtered_knowledge']
-    # })
+    response = chain.invoke({
+        "query" : state['query'],
+        "docs" : state['filtered_knowledge']
+    })
 
-    # state['final_answer'] = response
+    state['final_answer'] = response
 
-    # return state
-    response = ""
-
-    async for chunk in chain.astream({
-        "query": state["query"],
-        "docs": state["filtered_knowledge"]
-    }):
-
-        if chunk.content:
-            response += chunk.content
-
-    return {
-        "final_answer": response
-    }
+    return state
+    

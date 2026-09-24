@@ -18,40 +18,19 @@ async def irrelvent(state: Agent_state):
         ("human","Query: {query} \n docs: {docs}")
     ])
 
-    # parser = StrOutputParser()
+    parser = StrOutputParser()
 
-    chain = prompt | model
+    chain = prompt | model | parser
 
-    # response = chain.invoke({
-    #     "query" : state['query'],
-    #     "docs": state['filtered_web_knowledge'] 
-    # })
+    response = chain.invoke({
+        "query" : state['query'],
+        "docs": state['filtered_web_knowledge'] 
+    })
 
-    # state['final_answer'] = response
-    # sources = state['web_sources']
-    # state['final_answer'] += "\n\n\nThese are the sources used during response generation\n"
-    # for source in sources:
-    #     state['final_answer'] += f"- [{source['title']}]({source['source']})\n"
-
-    # return state
-
-    response = ""
-
-    async for chunk in chain.astream({
-        "query": state["query"],
-        "docs": state["filtered_web_knowledge"]
-    }):
-
-        if chunk.content:
-            response += chunk.content
-
-    sources = state["web_sources"]
-
-    response += "\n\n\nThese are the sources used during response generation\n"
-
+    state['final_answer'] = response
+    sources = state['web_sources']
+    state['final_answer'] += "\n\n\nThese are the sources used during response generation\n"
     for source in sources:
-        response += f"- [{source['title']}]({source['source']})\n"
+        state['final_answer'] += f"- [{source['title']}]({source['source']})\n"
 
-    return {
-        "final_answer": response
-    }
+    return state
