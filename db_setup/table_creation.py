@@ -36,7 +36,7 @@ def table_creation(table_name: str, DB_NAME : str = DB_NAME):
 
     except Exception as e:
 
-        return print(f"Some unexpected error occured during extension activation \n Error Detail : {e}")
+        raise ValueError(f"Some unexpected error occured during extension activation \n Error Detail : {e}")
 
     finally:
 
@@ -55,7 +55,11 @@ def table_creation(table_name: str, DB_NAME : str = DB_NAME):
             page_content TEXT NOT NULL,
             metadata JSONB,
             page_number INTEGER,
-            document_name TEXT NOT NULL
+            document_name TEXT NOT NULL,
+            content_tsv tsvector
+                GENERATED ALWAYS AS (
+                to_tsvector('english', page_content)
+                ) STORED;
             )
         """).format(sql.Identifier(table_name)))
 
