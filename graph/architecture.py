@@ -17,6 +17,7 @@ from graph.RAG_graph.retriever.websearch_mcp_client import web_search
 from graph.document_graph.graph.file_system_mcp_client import File_System_MCP
 from graph.document_graph.graph.load_docs import load_docs
 from graph.document_graph.graph.document_ingestion import ingest_documents
+from graph.db_operation.db_mcp_client import DB_mcp
 
 
 
@@ -24,6 +25,7 @@ subgraph = StateGraph(Agent_state)
 
 subgraph.add_node('intent_classifier', intent_classifier)
 subgraph.add_node('retriever', retriever, destinations=('retriever_evaluator',))
+subgraph.add_node("DB_MCP",DB_mcp, destinations=(END,))
 subgraph.add_node('no_path_found', no_path_found)
 subgraph.add_node('File_System_MCP', File_System_MCP,
     destinations=('load_docs', END)
@@ -47,7 +49,9 @@ subgraph.add_edge(START, 'intent_classifier')
 subgraph.add_conditional_edges('intent_classifier', query_router)
 subgraph.add_conditional_edges('doc_classification', doc_class_router)
 subgraph.add_edge('no_path_found', END)
+subgraph.add_edge('DB_MCP', END)
 subgraph.add_edge('load_docs', 'data_ingestion')
+
 
 checkpointer = MemorySaver()
 graph = subgraph.compile(checkpointer=checkpointer)
