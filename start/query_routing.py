@@ -3,7 +3,7 @@ from typing import Literal
 import os
 
 
-def query_router(state: Agent_state) -> Literal['File_System_MCP','retriever','no_path_found']:
+def query_router(state: Agent_state) -> Literal['File_System_MCP','DB_MCP','retriever','no_path_found']:
 
 
     """
@@ -30,5 +30,8 @@ def query_router(state: Agent_state) -> Literal['File_System_MCP','retriever','n
             return "no_path_found"
 
         return 'File_System_MCP'
+    
+    elif state['intent'] == 'DB':
+        return 'DB_MCP'
 
     return 'retriever'
