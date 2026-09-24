@@ -116,7 +116,7 @@ def delete_docs(docs_name: list[str], table_name: str = TABLE_NAME):
         })
     
     except Exception as e:
-                raise ValueError(f"Some unknown error occured during getting document name from db \n Error Details: {e}")
+        raise ValueError(f"Some unknown error occured during getting document name from db \n Error Details: {e}")
         
     finally:
         

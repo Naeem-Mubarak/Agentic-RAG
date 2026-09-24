@@ -4,6 +4,7 @@ from fastmcp import FastMCP
 import io
 import json
 import contextlib
+from typing import Optional
 
 
 mcp = FastMCP(name = "File System")
@@ -31,7 +32,7 @@ def list_files(path: str) -> str:
 
 
 @mcp.tool
-def doc_filter(files: list[str], folder: str = None) -> list:
+def doc_filter(files: list[str], folder: Optional[str] = None):
 
     """Filtering pdf documents from the directory"""
 

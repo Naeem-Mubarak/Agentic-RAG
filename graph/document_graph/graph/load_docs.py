@@ -72,10 +72,11 @@ async def load_docs(state: Agent_state):
 
 
     if skipped_docs:
-        print("These documents are already in the DB")
-        for i in skipped_docs:
-            print(i)
-        print("Skipped to avoid duplication")
+        state["tool_response"] = (
+            "The following documents are already in the DB:\n"
+            + "\n".join(f"- {doc}" for doc in skipped_docs)
+            + "\n\nSkipped to avoid duplication."
+        )
 
 
     state['selected_docs'] = selected_docs
