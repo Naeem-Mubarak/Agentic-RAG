@@ -1,3 +1,3 @@
 # Agentic-RAG
 
-![Agent workflow](assets/architecture.gif)
+![Agentic RAG Architecture](assets/architecture.png)
