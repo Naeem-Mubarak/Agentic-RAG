@@ -64,7 +64,7 @@ def embedding_generation(texts):
 
     
 
-def embedding_chunks(chunks, batch_size : int = 200):
+def embedding_chunks(chunks, batch_size : int = 100):
 
 
     """
