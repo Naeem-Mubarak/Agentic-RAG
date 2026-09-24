@@ -21,8 +21,7 @@ class Agent_state(TypedDict):
     retrieved_docs : List[dict]
     retrieval_score : List[float]
     doc_class : str
-
-
+    
     filtered_knowledge : List[str]
     filtered_web_knowledge: List[str]  
 
