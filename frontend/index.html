@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Agentic RAG</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div class="app">
+
+  <aside class="sidebar">
+    <button id="newChatBtn" class="new-chat-btn">
+      <span class="plus">+</span> New chat
+    </button>
+
+    <div id="chatList" class="chat-list"></div>
+
+    <button id="settingsBtn" class="settings-btn">
+      <span class="gear">&#9881;</span> Settings
+    </button>
+  </aside>
+
+  <main class="main">
+    <div id="messages" class="messages"></div>
+
+    <form id="composer" class="composer">
+      <input id="fileInput" type="file" hidden />
+      <button type="button" id="attachBtn" class="icon-btn" title="Upload a document">+</button>
+      <input id="textInput" type="text" placeholder="Message the agent..." autocomplete="off" />
+      <button type="submit" class="send-btn" title="Send">&#10148;</button>
+    </form>
+  </main>
+
+</div>
+
+<div id="settingsModal" class="modal hidden">
+  <div class="modal-card">
+    <h3>Settings</h3>
+    <label for="folderPathInput">Documents folder path</label>
+    <input id="folderPathInput" type="text" placeholder="/home/you/Desktop/Books" />
+    <div class="modal-actions">
+      <button id="closeSettingsBtn" class="btn-secondary" type="button">Cancel</button>
+      <button id="saveSettingsBtn" class="btn-primary" type="button">Save</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
