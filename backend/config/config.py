@@ -45,8 +45,8 @@ USERNAME = os.getenv('USER_NAME')
 PASSWORD = os.getenv('PASSWORD')
 DB_NAME = 'rag_db'
 TABLE_NAME = 'rag_docs'
-Chat_table_main = 'chat_table'
-Complete_Chat_table = 'chat_history'
+CHAT_TABLE = 'chat_table'
+CHAT_HISTORY = 'chat_history'
 POSTGRES_ADMIN_URL = os.getenv("POSTGRES_ADMIN_URL")
 DB_CONNECTION_URL = os.getenv("POSTGRES_DB_URL_RAG_DB")
 
