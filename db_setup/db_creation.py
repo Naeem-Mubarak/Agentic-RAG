@@ -1,5 +1,5 @@
 from dotenv import load_dotenv
-from config.config import POSTGRES_ADMIN_URL , db_connection
+from backend.config.config import POSTGRES_ADMIN_URL , db_connection
 from psycopg2 import sql
 
 

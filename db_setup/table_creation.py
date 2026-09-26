@@ -1,6 +1,7 @@
-from config.config import db_connection, DB_CONNECTION_URL, POSTGRES_ADMIN_URL, DB_NAME
+from backend.config.config import db_connection, DB_CONNECTION_URL, POSTGRES_ADMIN_URL, DB_NAME
 from psycopg2 import sql
 from urllib.parse import urlparse, urlunparse
+
 
 def table_creation(table_name: str, DB_NAME : str = DB_NAME):
 
@@ -49,7 +50,7 @@ def table_creation(table_name: str, DB_NAME : str = DB_NAME):
     try:
 
         cursor.execute(sql.SQL("""
-            CREATE TABLE {}(
+            CREATE TABLE IF NOT EXISTS {}(
             id BIGSERIAL PRIMARY KEY,
             embeddings vector(2000) NOT NULL,
             page_content TEXT NOT NULL,
@@ -59,7 +60,7 @@ def table_creation(table_name: str, DB_NAME : str = DB_NAME):
             content_tsv tsvector
                 GENERATED ALWAYS AS (
                 to_tsvector('english', page_content)
-                ) STORED;
+                ) STORED
             )
         """).format(sql.Identifier(table_name)))
 
