@@ -1,5 +1,5 @@
 
-def build_initial_state(query: str, folder_path: str) -> dict:
+def build_initial_state(query: str, folder_path: str = None) -> dict:
     """
     Fresh state dict per request. Never reuse a shared/module-level state
     object across concurrent connections — nodes mutate state in place,
