@@ -1,6 +1,6 @@
 from db_setup.db_creation import database_creation
 from db_setup.table_creation import table_creation
-from backend.config.config import USERNAME, PASSWORD, DB_NAME, TABLE_NAME, Chat_table_main, Complete_Chat_table
+from backend.config.config import USERNAME, PASSWORD, DB_NAME, TABLE_NAME, CHAT_TABLE, CHAT_HISTORY
 from db_setup.chat_history_tables.table_creation_for_chat import chat_saving_tables
 
 
@@ -18,5 +18,5 @@ def db_pipeline(username: str, password: str, DB_NAME: str, table_name: str, tab
     chat_saving_tables(table_name_chat1, table_name_chat2)
 
 
-db_pipeline(USERNAME, PASSWORD, DB_NAME, TABLE_NAME, Chat_table_main, Complete_Chat_table)
+db_pipeline(USERNAME, PASSWORD, DB_NAME, TABLE_NAME, CHAT_TABLE, CHAT_HISTORY)
 
