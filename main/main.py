@@ -1,10 +1,10 @@
-from graph.architecture import graph
-from graph.states.initial_state import initial_state
+from backend.graph.architecture import graph
+from backend.graph.states.initial_state import build_initial_state
 from langgraph.types import Command
 import uuid
 import asyncio
 
-
+initial_state = build_initial_state()
 
 async def main():
 
