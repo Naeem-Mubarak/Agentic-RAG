@@ -42,7 +42,7 @@ async def web_search(state: Agent_state) -> Command[Literal['knoweldge_refinemen
         }))
 
         source_title = []
-        web_searched_content = []
+        websearch_docs = []
         for message in result['messages']:
             if isinstance(message,ToolMessage):
                 for i in message.content:
@@ -52,9 +52,14 @@ async def web_search(state: Agent_state) -> Command[Literal['knoweldge_refinemen
                             "source" : content['url'],
                             "title" : content['title']
                         })
-                        web_searched_content.append(content['content'])
+                        websearch_docs.append({
+                            "content": content['content'],
+                            "source": content['url'],
+                            "page_number": None,
+                            "metadata": {"title": content['title']}
+                        })
 
         state['web_sources'] = source_title
-        state['websearch'] = web_searched_content
+        state['websearch'] = websearch_docs
 
         return Command(update=state, goto='knoweldge_refinement')
