@@ -148,7 +148,7 @@ Your job ends once you've either answered a listing/counting question directly, 
 """
 
 
-```python
+
 load_docs_agent_prompt = """
 You are a document-selection assistant.
 
@@ -255,7 +255,7 @@ FINAL REQUIREMENT:
 Return ONLY the selected exact document paths through the provided schema.
 Do not explain your reasoning.
 """
-```
+
 
 
 
