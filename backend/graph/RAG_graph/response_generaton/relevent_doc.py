@@ -15,16 +15,30 @@ async def relevent(state: Agent_state):
 
     prompt = ChatPromptTemplate.from_messages([
         ("system",relevant_generation_prompt),
-        ("human","Query: {query} \n docs: {docs}")
+        ("human","""Query: {query} 
+        \n docs: {docs} \n
+        chat_history: {history}""")
     ])
 
     parser = StrOutputParser()
 
     chain = prompt | model | parser
 
+    docs = "\n\n".join(
+        f"""--- Retrieved Document {i} ---
+        Source: {doc['source']}
+        Page: {doc['page_number']}
+        Metadata: {doc['metadata']}
+        
+        Content:
+        {doc['text']}"""
+        for i, doc in enumerate(state['filtered_knowledge'], start=1)
+    )
+
     response = chain.invoke({
         "query" : state['query'],
-        "docs" : state['filtered_knowledge']
+        "docs" : docs,
+        "history" : state['message_history']
     })
 
     state['final_answer'] = response

@@ -15,17 +15,37 @@ async def ambiguis(state: Agent_state):
 
     prompt = ChatPromptTemplate.from_messages([
         ("system",ambiguous_generation_prompt),
-        ("human","Query: {query} \n retrieved docs: {retrieved_docs} \n\n websearch docs: {web_docs} ")
+        ("human","""Query: {query} 
+        \n retrieved docs: {retrieved_docs} 
+        \n\n websearch docs: {web_docs} 
+        \n\n chat_history: {history}""")
     ])
 
     parser = StrOutputParser()
 
     chain = prompt | model | parser
 
+    retrieved_docs = "\n\n".join(
+        f"""--- Retrieved Document {i} ---
+        Source: {doc['source']}
+        Page: {doc['page_number']}
+        Metadata: {doc['metadata']}
+
+        Content:
+        {doc['text']}"""
+        for i, doc in enumerate(state['filtered_knowledge'], start=1)
+    )
+
+    web_docs = "\n\n".join(
+        str(doc)
+        for doc in state['filtered_web_knowledge']
+    )
+
     response = chain.invoke({
         "query" : state['query'],
-        "retrieved_docs": state['filtered_knowledge'],   
-        "web_docs": state['filtered_web_knowledge'] 
+        "retrieved_docs": retrieved_docs,   
+        "web_docs": web_docs,
+        "history" : state['message_history']
     })
 
     state['final_answer'] = response

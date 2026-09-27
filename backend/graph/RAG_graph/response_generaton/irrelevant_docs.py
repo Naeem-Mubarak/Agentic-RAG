@@ -15,7 +15,9 @@ async def irrelvent(state: Agent_state):
 
     prompt = ChatPromptTemplate.from_messages([
         ("system",irrelevant_generation_prompt),
-        ("human","Query: {query} \n docs: {docs}")
+        ("human","""Query: {query} 
+        \n docs: {docs}
+        \n chat_history: {history}""")
     ])
 
     parser = StrOutputParser()
@@ -24,7 +26,8 @@ async def irrelvent(state: Agent_state):
 
     response = chain.invoke({
         "query" : state['query'],
-        "docs": state['filtered_web_knowledge'] 
+        "docs": state['filtered_web_knowledge'],
+        "history" : state['message_history'] 
     })
 
     state['final_answer'] = response
