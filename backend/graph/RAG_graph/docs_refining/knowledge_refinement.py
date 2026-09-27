@@ -11,66 +11,114 @@ model = general_model()
 
 class filtered_knowledge(BaseModel):
 
-    useful_sentence : List[str]
+    useful_sentence : List[int]
 
 
 
 def decompose_strips(text: str) -> list[str]:
-
     """
-    Splitting paragrph into sentence
+    Split paragraph into sentences.
     """
-    joined = " ".join(text)
-    joined = re.sub(r"\s+", " ",joined).strip()
-    sentences = re.split(r"(?<=[.!?])\s+",joined)
-    return [s.strip() for s in sentences if len(s.strip())>20]
+    text = re.sub(r"\s+", " ", text).strip()
+    sentences = re.split(r"(?<=[.!?])\s+", text)
+
+    return [
+        s.strip()
+        for s in sentences
+        if len(s.strip()) > 20
+    ]
 
 
 
 
-def _refine(query: str, texts: list[str]) -> List[str]:
+def _refine(query: str, docs: list[dict]) -> list[dict]:
 
-    strips = decompose_strips(texts)
-    
+    sentences = []
+
+    for doc_idx, doc in enumerate(docs):
+
+        doc_sentences = decompose_strips(doc["content"])
+
+        for sentence in doc_sentences:
+            sentences.append({
+                "id": len(sentences),
+                "text": sentence,
+                "source": doc["source"],
+                "page_number": doc["page_number"],
+                "metadata": doc["metadata"],
+            })
+
+    sentence_text = "\n".join(
+        f"[{sentence['id']}] {sentence['text']}"
+        for sentence in sentences
+    )
+
     prompt = ChatPromptTemplate.from_messages([
-        ('system',knowledge_filter_prompt),
-        ('human','Query: {query} \n list of sentences : {sentences}')
+        ("system", knowledge_filter_prompt),
+        (
+            "human",
+            "Query: {query}\n\n"
+            "Candidate sentences:\n{sentences}"
+        )
     ])
 
     structured_llm = model.with_structured_output(filtered_knowledge)
 
     chain = prompt | structured_llm
+
     response = chain.invoke({
-        "query" : query,
-        "sentences" : strips
+        "query": query,
+        "sentences": sentence_text
     })
 
-    return response.useful_sentence
+    selected_ids = set(response.useful_sentence)
+
+    return [
+        sentence
+        for sentence in sentences
+        if sentence["id"] in selected_ids
+    ]
 
 
   
 
-def knoweldge_refinement(state: Agent_state) -> Command[Literal['relevant', 'not_relevant', 'ambiguis']]:
+def knoweldge_refinement(
+    state: Agent_state
+) -> Command[Literal["relevant", "not_relevant", "ambiguis"]]:
 
-    """
-    Refines whichever knowledge source(s) this branch needs — retrieved docs for
-    'relevant', web search results for 'irrelevant', both (kept separate) for
-    'ambiguis' — then routes to the matching generation node.
-    """
+    if state["doc_class"] == "relevant":
 
-    if state['doc_class'] == 'relevant':
-        docs = [doc['content'] for doc in state['retrieved_docs']]
-        state['filtered_knowledge'] = _refine(state['query'], docs)
-        next_node = 'relevant'
+        state["filtered_knowledge"] = _refine(
+            state["query"],
+            state["retrieved_docs"]
+        )
 
-    elif state['doc_class'] == 'irrelevant':
-        state['filtered_web_knowledge'] = _refine(state['query'], state['websearch'])
-        next_node = 'not_relevant'
+        next_node = "relevant"
 
-    else:  # ambiguis
-        doc_texts = [doc['content'] for doc in state['retrieved_docs']]
-        state['filtered_knowledge'] = _refine(state['query'], doc_texts)
-        state['filtered_web_knowledge'] = _refine(state['query'], state['websearch'])
-        next_node = 'ambiguis'
+    elif state["doc_class"] == "irrelevant":
 
-    return Command(update=state, goto=next_node)
+        state["filtered_web_knowledge"] = _refine(
+            state["query"],
+            state["websearch"]
+        )
+
+        next_node = "not_relevant"
+
+    else:
+
+        state["filtered_knowledge"] = _refine(
+            state["query"],
+            state["retrieved_docs"]
+        )
+
+        state["filtered_web_knowledge"] = _refine(
+            state["query"],
+            state["websearch"]
+        )
+
+        next_node = "ambiguis"
+
+    return Command(
+        update=state,
+        goto=next_node
+    )
