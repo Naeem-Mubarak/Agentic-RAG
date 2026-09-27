@@ -28,11 +28,23 @@ def retriever_evaluator(state: Agent_state) -> Command[Literal['doc_classificati
     chain = prompt | structured_llm
 
     try:
+        docs_for_evaluation = "\n\n".join(
+            f"""--- Chunk {i} ---
+            Source: {doc['source']}
+            Page: {doc['page_number']}
+            Metadata: {doc['metadata']}
+
+            Content:
+            {doc['content']}"""
+            for i, doc in enumerate(state['retrieved_docs'], start=1)
+        )
 
         response = chain.invoke({
-            "query" : state['query'],
-            "docs" : state['retrieved_docs']
+            "query": state['query'],
+            "docs": docs_for_evaluation
         })
+
+
         state['retrieval_score'] = [c.score for c in response.score]
         return Command(update=state, goto='doc_classification')
     

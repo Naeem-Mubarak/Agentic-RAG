@@ -1,7 +1,8 @@
-
-
-
 def RRF(similar_data, key_word_data, k: int = 60):
+
+    """
+    Reciprocal Rank Fusion algorithm rate retrieved docs according to relevency
+    """
 
     similar_list = []
     for rank, data in enumerate(similar_data,start=1):
@@ -44,8 +45,9 @@ def RRF(similar_data, key_word_data, k: int = 60):
 
                 content.append({
                     "content": data[1],
-                    "page_number": data[2],
-                    "source": data[3],
+                    "metadata": data[2],
+                    "page_number": data[3],
+                    "source": data[4],
                     "score": rrf_score
                 })
 

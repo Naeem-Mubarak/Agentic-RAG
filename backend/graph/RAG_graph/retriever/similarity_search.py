@@ -26,6 +26,7 @@ def similarity_retreiver(query: str, TABLE_NAME: str = TABLE_NAME, top_k: int = 
         sql.SQL("""SELECT
         id,
         page_content,
+        metadata,
         page_number,
         document_name,
         1 - (embeddings <=> %s::vector) AS similarity

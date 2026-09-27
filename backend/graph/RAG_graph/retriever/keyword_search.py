@@ -19,6 +19,7 @@ def keyword_search(query: str, table_name :str = TABLE_NAME,top_k: int = 5):
             sql.SQL("""SELECT
             id,
             page_content,
+            metadata,
             page_number,
             document_name,
             ts_rank(
