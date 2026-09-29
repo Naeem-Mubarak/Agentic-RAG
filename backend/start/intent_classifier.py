@@ -7,7 +7,7 @@ from typing import Literal
 # schema defining
 class user_intent(BaseModel):
 
-    intent : Literal["document","RAG", "DB"]
+    intent : Literal["document","RAG", "DB","general"]
     document_action: Literal["list", "load", "none"] = "none"
 
 
