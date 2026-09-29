@@ -74,8 +74,8 @@ def load_docs(path: str, pdf_docs: list[str] = None) -> str:
         try:
             loader = PyMuPDFLoader(
                 file_path=doc_path,
-                # extract_images=True,
-                extract_tables='markdown'
+                # extract_images=True, currently ignoring them for testing
+                # extract_tables='markdown'
             )
             with contextlib.redirect_stdout(io.StringIO()):
                 docs = loader.load()
