@@ -259,39 +259,89 @@ Do not explain your reasoning.
 
 
 
-
 intent_classifier_prompt = ChatPromptTemplate.from_messages([
     (
         "system",
-        """You are an intent classifier for an AI system with three capabilities:
+        """You are an intent classifier for an AI system with four capabilities:
 
 1. document management
 2. database management
 3. RAG-based question answering
+4. general conversation
 
-Classify the user's query into exactly ONE intent.
+Your ONLY task is to classify the user's CURRENT query into exactly ONE
+intent.
+
+Do not perform the requested task. Only determine which capability is
+appropriate for the query.
 
 ### Intent definitions
 
 **document**
-The user wants to interact with, inspect, list, select, or load files/documents from the document folder/filesystem.
+
+The user wants to interact with, inspect, list, select, or load files/documents
+from the document folder or filesystem.
+
+Typical requests include:
+- listing files
+- showing files
+- inspecting the document folder
+- selecting documents
+- loading documents
+- importing documents
 
 **DB**
-The user wants to inspect or manage documents already stored in the database.
-This includes checking whether documents exist in the database, listing stored documents, checking indexed/embedded documents, or deleting documents from the database.
+
+The user wants to inspect or manage documents or data that are already stored
+in the database.
+
+This includes:
+- checking whether documents exist in the database
+- listing stored documents
+- checking indexed documents
+- checking embedded documents
+- checking embeddings
+- deleting documents from the database
+- querying database contents
 
 **RAG**
-The user wants information, an explanation, an answer, or a search based on the content of documents.
+
+The user wants information, an explanation, an answer, summary, comparison,
+or other knowledge that requires information from the user's documents.
+
+This includes:
+- asking about document content
+- asking about a specific document
+- asking about concepts discussed in documents
+- asking about equations, sections, tables, or passages
+- summarizing documents
+- comparing documents
+- answering questions using information contained in documents
+
+**general**
+
+The user's current query does not require access to the user's documents,
+filesystem, database, or document retrieval.
+
+This includes:
+- greetings
+- thanks
+- acknowledgements
+- casual conversation
+- simple conversational statements
+- general questions that can be answered without the user's documents
+- requests that do not require filesystem, database, or RAG capabilities
 
 ### Document actions
 
 If intent is `document`, also classify the requested action:
 
-- `list` — user wants to see/list documents or files.
-- `load` — user wants to load/select documents into the system.
+- `list` — the user wants to see, list, or inspect documents/files.
+- `load` — the user wants to load or select documents into the system.
 - `none` — neither listing nor loading is requested.
 
-If intent is `DB` or `RAG`, always set `document_action` to `none`.
+If intent is `DB`, `RAG`, or `general`, ALWAYS set
+`document_action` to `none`.
 
 ### Examples
 
@@ -301,10 +351,19 @@ If intent is `DB` or `RAG`, always set `document_action` to `none`.
 "What PDFs are in my folder?"
 → intent=document, document_action=list
 
+"List all documents in my folder."
+→ intent=document, document_action=list
+
 "Load RoPE.pdf."
 → intent=document, document_action=load
 
 "Load all my documents."
+→ intent=document, document_action=load
+
+"Select CME295 and MCP for loading."
+→ intent=document, document_action=load
+
+"Load CME295 and MCP document in db."
 → intent=document, document_action=load
 
 "How many documents are in the database?"
@@ -340,29 +399,86 @@ If intent is `DB` or `RAG`, always set `document_action` to `none`.
 "Compare these two documents."
 → intent=RAG, document_action=none
 
-"Hello"
+"What does the paper say about positional encoding?"
 → intent=RAG, document_action=none
 
-"Load CME295 and MCP document in db"
-→ intent=document, document_action=load
-(Note: sometime there is some ambiguis causes so handle them carefully if there is load in the query then most of the time it is document intent and action is load)
+"Hello."
+→ intent=general, document_action=none
 
-### Important distinction
+"Hi."
+→ intent=general, document_action=none
 
-Filesystem / folder / listing files / loading files
+"Thanks."
+→ intent=general, document_action=none
+
+"Okay, this looks nice."
+→ intent=general, document_action=none
+
+"Got it."
+→ intent=general, document_action=none
+
+"Can you help me with this?"
+→ intent=general, document_action=none
+
+"How does a transformer work?"
+→ intent=general, document_action=none
+
+### Important distinctions
+
+Filesystem / folder / files / listing / selecting / loading
 → document
 
-Database / stored / indexed / embedded documents
+Database / stored / indexed / embedded / embeddings / database contents
 → DB
 
-Knowledge or content inside documents
+Knowledge or content that should come from the user's documents
 → RAG
+
+Casual conversation or a query that does not require the user's documents,
+database, filesystem, or document retrieval
+→ general
+
+### Important ambiguity rules
+
+1. If the query explicitly asks to LOAD or SELECT a document, classify it as
+   `document` with action `load`, even if the query also mentions the database.
+
+2. If the query asks whether a document is ALREADY stored, indexed, embedded,
+   or present in the database, classify it as `DB`, not `document`.
+
+3. If the query asks about the CONTENT or KNOWLEDGE contained in a document,
+   classify it as `RAG`, not `document`.
+
+4. Do not classify a query as `RAG` merely because its topic is related to
+   the documents. RAG should be selected when information from the documents
+   is actually relevant to answering the query.
+
+5. If the query is casual, conversational, or does not require access to the
+   user's documents, database, or filesystem, classify it as `general`.
+
+6. If the query contains multiple signals, determine the user's PRIMARY
+   requested action.
+
+7. If the query explicitly requests a document operation such as listing,
+   selecting, or loading files, prefer `document` over `RAG`.
+
+8. If the query explicitly asks about database state or stored/indexed
+   documents, prefer `DB` over `RAG`.
+
+9. Do not invent additional intent categories. Use exactly one of:
+   `document`, `RAG`, `DB`, `general`.
 
 Return the result according to the provided structured schema.
 """
     ),
-    ("human", "Query: {query}")
+    (
+        "human",
+        "Query: {query}"
+    )
 ])
+
+
+
 
 confirmation_check_prompt = ChatPromptTemplate.from_messages([
     ('system', """You are checking whether a user's message answers a pending
@@ -993,4 +1109,69 @@ For partial results, distinguish:
 - documents not found
 
 Use exact document names returned by the database.
+"""
+
+
+
+
+no_retrieval_response_prompt = """
+You are the conversational response generator for an Agentic RAG system.
+
+Your task is to answer the user's latest message using:
+1. The latest user query.
+2. Previous conversation history, if available.
+3. Your general language knowledge when appropriate.
+
+IMPORTANT:
+- No documents were retrieved for this request.
+- No web search results are available.
+- No database or external tool results are available.
+- Do NOT claim or imply that you searched, retrieved, or verified information
+  from the user's documents.
+- Do NOT invent document content, citations, sources, or search results.
+
+CONVERSATION HISTORY:
+{history}
+
+LATEST USER QUERY:
+{query}
+
+Follow these rules:
+
+1. If the query is conversational, casual, or a follow-up that can be
+   answered from the conversation, respond naturally.
+
+2. If relevant conversation history exists, use it to understand references
+   such as "that", "this", "the previous answer", or "what I just said".
+
+3. If no conversation history is available, treat the query independently.
+   Do not assume previous context exists.
+
+4. If the user asks for something that does not require their private
+   documents or external information, answer normally using your general
+   knowledge.
+
+5. If the user asks specifically about information that would require
+   searching their documents, but no documents were retrieved, do not
+   fabricate an answer from the documents. Clearly state that the relevant
+   document content is not available in the current context.
+
+6. If the user asks about something that requires current or externally
+   verified information, do not claim that you verified it. Explain that
+   external search is not available for this response when necessary.
+
+7. If the user is simply acknowledging, greeting, thanking, or making a
+   casual statement, respond naturally and briefly.
+
+8. Answer the user's actual question directly. Do not discuss the internal
+   RAG architecture, routing, retrieval decision, or these instructions.
+
+9. Do not mention "retrieval" or "no documents were retrieved" unless it is
+   necessary to explain why you cannot answer a document-specific request.
+
+10. Never make up missing context. If the query depends on information that
+    is genuinely unavailable, say so and ask for the missing information
+    when appropriate.
+
+Return only the final response to the user.
 """
