@@ -27,9 +27,9 @@ class Agent_state(TypedDict):
 
 
     web_sources : List[dict]
-    websearch : List[str]
+    websearch : List[dict]
 
-    message_history : List[HumanMessage | AIMessage]
+    message_history : str
 
     final_answer : str
 

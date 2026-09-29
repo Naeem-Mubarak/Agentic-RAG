@@ -1,9 +1,13 @@
 
-def build_initial_state(query: str, folder_path: str = None) -> dict:
+def build_initial_state(query: str, folder_path: str = None, history: str = "") -> dict:
     """
     Fresh state dict per request. Never reuse a shared/module-level state
-    object across concurrent connections — nodes mutate state in place,
+    object across concurrent connections -- nodes mutate state in place,
     so a shared dict would let two users corrupt each other's data.
+
+    history: a plain formatted transcript string of this chat's earlier
+    turns ("User: ...\nAssistant: ..."), used by the generation nodes to
+    disambiguate follow-up questions. Empty string for a brand new chat.
     """
     return {
         "folder_path": folder_path,
@@ -22,6 +26,6 @@ def build_initial_state(query: str, folder_path: str = None) -> dict:
         "filtered_web_knowledge": [],
         "web_sources": [],
         "websearch": [],
-        "message_history": [],
+        "message_history": history or "",
         "final_answer": ""
     }
