@@ -18,40 +18,42 @@ from backend.graph.document_graph.graph.file_system_mcp_client import File_Syste
 from backend.graph.document_graph.graph.load_docs import load_docs
 from backend.graph.document_graph.graph.document_ingestion import ingest_documents
 from backend.graph.db_operation.db_mcp_client import DB_mcp
+from backend.graph.RAG_graph.response_generaton.no_search_response import no_search_response_generator
 
 
 
-subgraph = StateGraph(Agent_state)
+agent_graph = StateGraph(Agent_state)
 
-subgraph.add_node('intent_classifier', intent_classifier)
-subgraph.add_node('retriever', retriever, destinations=('retriever_evaluator',))
-subgraph.add_node("DB_MCP",DB_mcp, destinations=(END,))
-subgraph.add_node('no_path_found', no_path_found)
-subgraph.add_node('File_System_MCP', File_System_MCP,
+agent_graph.add_node('intent_classifier', intent_classifier)
+agent_graph.add_node('retriever', retriever, destinations=('retriever_evaluator',))
+agent_graph.add_node("DB_MCP",DB_mcp, destinations=(END,))
+agent_graph.add_node('no_search_response', no_search_response_generator)
+agent_graph.add_node('no_path_found', no_path_found)
+agent_graph.add_node('File_System_MCP', File_System_MCP,
     destinations=('load_docs', END)
 )
-subgraph.add_node('load_docs', load_docs)
-subgraph.add_node('data_ingestion', ingest_documents,
+agent_graph.add_node('load_docs', load_docs)
+agent_graph.add_node('data_ingestion', ingest_documents,
     destinations=(END,),
     retry_policy=RetryPolicy(max_attempts=3)
 )
-subgraph.add_node('retriever_evaluator', retriever_evaluator, destinations=('doc_classification', 'websearch'))
-subgraph.add_node('doc_classification', document_classification)
-subgraph.add_node('websearch', web_search, destinations=('knoweldge_refinement',))
-subgraph.add_node('knoweldge_refinement', knoweldge_refinement,
+agent_graph.add_node('retriever_evaluator', retriever_evaluator, destinations=('doc_classification', 'websearch'))
+agent_graph.add_node('doc_classification', document_classification)
+agent_graph.add_node('websearch', web_search, destinations=('knoweldge_refinement',))
+agent_graph.add_node('knoweldge_refinement', knoweldge_refinement,
     destinations=('relevant', 'not_relevant', 'ambiguis')
 )
-subgraph.add_node('relevant', relevent)
-subgraph.add_node('not_relevant', irrelvent)
-subgraph.add_node('ambiguis', ambiguis)
-
-subgraph.add_edge(START, 'intent_classifier')
-subgraph.add_conditional_edges('intent_classifier', query_router)
-subgraph.add_conditional_edges('doc_classification', doc_class_router)
-subgraph.add_edge('no_path_found', END)
-subgraph.add_edge('DB_MCP', END)
-subgraph.add_edge('load_docs', 'data_ingestion')
+agent_graph.add_node('relevant', relevent)
+agent_graph.add_node('not_relevant', irrelvent)
+agent_graph.add_node('ambiguis', ambiguis)
+agent_graph.add_edge(START, 'intent_classifier')
+agent_graph.add_conditional_edges('intent_classifier', query_router)
+agent_graph.add_conditional_edges('doc_classification', doc_class_router)
+agent_graph.add_edge('no_path_found', END)
+agent_graph.add_edge('DB_MCP', END)
+agent_graph.add_edge('no_search_response', END)
+agent_graph.add_edge('load_docs', 'data_ingestion')
 
 
 checkpointer = MemorySaver()
-graph = subgraph.compile(checkpointer=checkpointer)
+graph = agent_graph.compile(checkpointer=checkpointer)
