@@ -7,7 +7,7 @@ class Agent_state(TypedDict):
 
     folder_path : str
 
-    intent : Literal["document","RAG"]
+    intent : Literal["document","RAG","DB","general"]
     query : str
 
     document_action: Literal["list", "load", "none"] = "none"
