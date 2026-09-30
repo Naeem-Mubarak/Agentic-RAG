@@ -22,7 +22,7 @@ def ingest_documents(state: Agent_state) -> Command[Literal['__end__']]:
         f"{i}. {document}"
         for i, document in enumerate(state['selected_docs'], start=1)
     )
-    state['final_answer'] = message
+    state['tool_response'] = message
 
     return Command(update=state, goto=END)
     
