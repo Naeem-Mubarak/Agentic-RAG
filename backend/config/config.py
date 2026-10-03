@@ -269,13 +269,16 @@ intent_classifier_prompt = ChatPromptTemplate.from_messages([
 3. RAG-based question answering
 4. general conversation
 
-Your ONLY task is to classify the user's CURRENT query into exactly ONE
-intent.
+Your task is to analyze the CURRENT query, optionally use the PREVIOUS
+EXCHANGE to resolve context or ambiguity, rewrite the query when necessary,
+and classify the final meaning into exactly ONE intent.
 
-Do not perform the requested task. Only determine which capability is
-appropriate for the query.
+Do not perform the requested task. Only resolve the query and determine which
+capability should handle it.
 
-### Intent definitions
+--------------------------------------------------
+INTENT DEFINITIONS
+--------------------------------------------------
 
 **document**
 
@@ -320,7 +323,7 @@ This includes:
 
 **general**
 
-The user's current query does not require access to the user's documents,
+The user's query does not require access to the user's documents,
 filesystem, database, or document retrieval.
 
 This includes:
@@ -332,7 +335,115 @@ This includes:
 - general questions that can be answered without the user's documents
 - requests that do not require filesystem, database, or RAG capabilities
 
-### Document actions
+--------------------------------------------------
+FOLLOW-UP QUERY HANDLING
+--------------------------------------------------
+
+The CURRENT query may be a continuation of the PREVIOUS EXCHANGE.
+
+First determine whether the CURRENT query depends on the PREVIOUS EXCHANGE
+to be understood correctly.
+
+A query is a follow-up when it contains references, omissions, or implicit
+context that can only be resolved using the previous exchange.
+
+Examples:
+
+- "give me their names"
+- "what about the first one?"
+- "what is that document about?"
+- "explain it"
+- "tell me more about it"
+- "delete that one"
+- "what are its embeddings?"
+- "how many pages does it have?"
+
+If the CURRENT query is a follow-up:
+
+1. Use the PREVIOUS USER QUERY and PREVIOUS ASSISTANT RESPONSE to resolve
+   the missing context.
+
+2. Construct a clear, self-contained `rewritten_query` that preserves the
+   user's intended meaning.
+
+3. Classify the intent based on the meaning of the rewritten query.
+
+4. Set `is_follow_up` to true.
+
+If the CURRENT query is NOT a follow-up:
+
+1. Ignore the previous exchange for determining the meaning of the current
+   query.
+
+2. Keep the CURRENT query as the `rewritten_query` with only minimal
+   normalization if necessary.
+
+3. Classify the current query normally.
+
+4. Set `is_follow_up` to false.
+
+IMPORTANT:
+The previous intent must NOT automatically determine the current intent.
+
+The previous exchange is ONLY context for resolving the current query.
+After resolving the query, determine the intent from the resulting meaning.
+
+--------------------------------------------------
+QUERY REWRITING RULES
+--------------------------------------------------
+
+The `rewritten_query` must be self-contained.
+
+It should contain enough information for another component to understand the
+user's request WITHOUT seeing the previous conversation.
+
+Example:
+
+Previous User:
+"How many files are in the database?"
+
+Previous Assistant:
+"There are three files in the database."
+
+Current Query:
+"Give me the name of that document."
+
+Correct rewritten query:
+"What are the names of the three documents stored in the database?"
+
+Do NOT simply copy the current query when important context is missing.
+
+However, do not add information that is not supported by the previous
+exchange.
+
+--------------------------------------------------
+IMPORTANT INTENT DISTINCTION
+--------------------------------------------------
+
+The intent of the PREVIOUS query and the intent of the CURRENT query can be
+different.
+
+For example:
+
+Previous User:
+"How many files are in the database?"
+
+Previous Assistant:
+"There are three files in the database."
+
+Current Query:
+"What is the first document about?"
+
+The current query is a follow-up, but the final intent may be RAG because the
+user is asking about the CONTENT of a document rather than database state.
+
+Therefore:
+
+Follow-up status and intent are two separate decisions.
+
+--------------------------------------------------
+DOCUMENT ACTION
+--------------------------------------------------
 
 If intent is `document`, also classify the requested action:
 
@@ -343,102 +454,199 @@ If intent is `document`, also classify the requested action:
 If intent is `DB`, `RAG`, or `general`, ALWAYS set
 `document_action` to `none`.
 
-### Examples
+--------------------------------------------------
+DIRECT QUERY EXAMPLES
+--------------------------------------------------
 
 "Show me my files."
-→ intent=document, document_action=list
+→ rewritten_query="Show me my files."
+→ intent=document
+→ document_action=list
+→ is_follow_up=false
 
 "What PDFs are in my folder?"
-→ intent=document, document_action=list
+→ rewritten_query="What PDFs are in my folder?"
+→ intent=document
+→ document_action=list
+→ is_follow_up=false
 
 "List all documents in my folder."
-→ intent=document, document_action=list
+→ rewritten_query="List all documents in my folder."
+→ intent=document
+→ document_action=list
+→ is_follow_up=false
 
 "Load RoPE.pdf."
-→ intent=document, document_action=load
+→ rewritten_query="Load RoPE.pdf."
+→ intent=document
+→ document_action=load
+→ is_follow_up=false
 
 "Load all my documents."
-→ intent=document, document_action=load
+→ rewritten_query="Load all my documents."
+→ intent=document
+→ document_action=load
+→ is_follow_up=false
 
 "Select CME295 and MCP for loading."
-→ intent=document, document_action=load
-
-"Load CME295 and MCP document in db."
-→ intent=document, document_action=load
+→ rewritten_query="Select CME295 and MCP for loading."
+→ intent=document
+→ document_action=load
+→ is_follow_up=false
 
 "How many documents are in the database?"
-→ intent=DB, document_action=none
+→ rewritten_query="How many documents are in the database?"
+→ intent=DB
+→ document_action=none
+→ is_follow_up=false
 
 "Which documents are stored in the database?"
-→ intent=DB, document_action=none
+→ rewritten_query="Which documents are stored in the database?"
+→ intent=DB
+→ document_action=none
+→ is_follow_up=false
 
 "Is LLMOps.pdf already in the database?"
-→ intent=DB, document_action=none
+→ rewritten_query="Is LLMOps.pdf already in the database?"
+→ intent=DB
+→ document_action=none
+→ is_follow_up=false
 
 "How many documents have been indexed?"
-→ intent=DB, document_action=none
+→ rewritten_query="How many documents have been indexed?"
+→ intent=DB
+→ document_action=none
+→ is_follow_up=false
 
 "Which documents have embeddings?"
-→ intent=DB, document_action=none
+→ rewritten_query="Which documents have embeddings?"
+→ intent=DB
+→ document_action=none
+→ is_follow_up=false
 
 "Delete LLMOps.pdf from the database."
-→ intent=DB, document_action=none
+→ rewritten_query="Delete LLMOps.pdf from the database."
+→ intent=DB
+→ document_action=none
+→ is_follow_up=false
 
 "What is LLMOps?"
-→ intent=RAG, document_action=none
+→ rewritten_query="What is LLMOps?"
+→ intent=RAG
+→ document_action=none
+→ is_follow_up=false
 
 "Explain RoPE."
-→ intent=RAG, document_action=none
+→ rewritten_query="Explain RoPE."
+→ intent=RAG
+→ document_action=none
+→ is_follow_up=false
 
 "What does my transformer document say about attention?"
-→ intent=RAG, document_action=none
+→ rewritten_query="What does my transformer document say about attention?"
+→ intent=RAG
+→ document_action=none
+→ is_follow_up=false
 
 "Summarize my transformer notes."
-→ intent=RAG, document_action=none
-
-"Compare these two documents."
-→ intent=RAG, document_action=none
-
-"What does the paper say about positional encoding?"
-→ intent=RAG, document_action=none
+→ rewritten_query="Summarize my transformer notes."
+→ intent=RAG
+→ document_action=none
+→ is_follow_up=false
 
 "Hello."
-→ intent=general, document_action=none
-
-"Hi."
-→ intent=general, document_action=none
+→ rewritten_query="Hello."
+→ intent=general
+→ document_action=none
+→ is_follow_up=false
 
 "Thanks."
-→ intent=general, document_action=none
+→ rewritten_query="Thanks."
+→ intent=general
+→ document_action=none
+→ is_follow_up=false
 
-"Okay, this looks nice."
-→ intent=general, document_action=none
+--------------------------------------------------
+FOLLOW-UP EXAMPLES
+--------------------------------------------------
 
-"Got it."
-→ intent=general, document_action=none
+Previous User:
+"How many files are in the database?"
 
-"Can you help me with this?"
-→ intent=general, document_action=none
+Previous Assistant:
+"There are three files in the database."
 
-"How does a transformer work?"
-→ intent=general, document_action=none
+Current Query:
+"Give me their names."
 
-### Important distinctions
+→ rewritten_query="What are the names of the three files stored in the database?"
+→ intent=DB
+→ document_action=none
+→ is_follow_up=true
 
-Filesystem / folder / files / listing / selecting / loading
-→ document
 
-Database / stored / indexed / embedded / embeddings / database contents
-→ DB
+Previous User:
+"How many files are in the database?"
 
-Knowledge or content that should come from the user's documents
-→ RAG
+Previous Assistant:
+"There are three files in the database."
 
-Casual conversation or a query that does not require the user's documents,
-database, filesystem, or document retrieval
-→ general
+Current Query:
+"What is the first one about?"
 
-### Important ambiguity rules
+→ rewritten_query="What is the first document stored in the database about?"
+→ intent=RAG
+→ document_action=none
+→ is_follow_up=true
+
+
+Previous User:
+"Which documents are stored in the database?"
+
+Previous Assistant:
+"The database contains CME295.pdf, RoPE.pdf, and LLMOps.pdf."
+
+Current Query:
+"Delete the second one."
+
+→ rewritten_query="Delete RoPE.pdf from the database."
+→ intent=DB
+→ document_action=none
+→ is_follow_up=true
+
+
+Previous User:
+"Which documents are in my folder?"
+
+Previous Assistant:
+"The folder contains CME295.pdf and RoPE.pdf."
+
+Current Query:
+"Load the second one."
+
+→ rewritten_query="Load RoPE.pdf."
+→ intent=document
+→ document_action=load
+→ is_follow_up=true
+
+
+Previous User:
+"How many files are in the database?"
+
+Previous Assistant:
+"There are three files in the database."
+
+Current Query:
+"What do you know about Sampling in statistics?"
+
+→ rewritten_query="What do you know about Sampling in statistics?"
+→ intent=RAG
+→ document_action=none
+→ is_follow_up=false
+
+--------------------------------------------------
+IMPORTANT AMBIGUITY RULES
+--------------------------------------------------
 
 1. If the query explicitly asks to LOAD or SELECT a document, classify it as
    `document` with action `load`, even if the query also mentions the database.
@@ -454,7 +662,8 @@ database, filesystem, or document retrieval
    is actually relevant to answering the query.
 
 5. If the query is casual, conversational, or does not require access to the
-   user's documents, database, or filesystem, classify it as `general`.
+   user's documents, database, filesystem, or document retrieval, classify it
+   as `general`.
 
 6. If the query contains multiple signals, determine the user's PRIMARY
    requested action.
@@ -465,18 +674,77 @@ database, filesystem, or document retrieval
 8. If the query explicitly asks about database state or stored/indexed
    documents, prefer `DB` over `RAG`.
 
-9. Do not invent additional intent categories. Use exactly one of:
-   `document`, `RAG`, `DB`, `general`.
+9. Follow-up status must be determined independently from intent.
+
+10. Previous intent must never be copied automatically to the current query.
+
+11. The rewritten query must preserve the user's intended request and must
+    not introduce unsupported information.
+
+12. Use exactly one of:
+    `document`, `RAG`, `DB`, `general`.
+   
+### Conversation-reference queries
+
+Some queries refer to the conversation itself rather than requesting the
+previous task to be performed again.
+
+Examples include:
+
+- "What did I just ask you?"
+- "What was my last question?"
+- "What did I ask before that?"
+- "What did you just tell me?"
+- "What was your previous answer?"
+- "Repeat my last question."
+- "What was the previous query?"
+- "What did I ask about?"
+- "What did you just say?"
+
+These queries should NOT be routed to document, DB, or RAG merely because the
+previous query involved documents, files, folders, or database contents.
+
+When the user asks about what they previously asked, what the assistant
+previously said, or the conversation itself:
+
+1. Treat the query as a request about conversation history.
+2. Do not reinterpret it as a request to repeat the previous operation.
+3. Do not route it to filesystem, database, or RAG.
+4. Set intent to `general`.
+5. Set document_action to `none`.
+6. Rewrite the query only if necessary to make its conversational meaning
+   explicit.
+
+Example:
+
+Previous User:
+"Is there any docx?"
+
+Previous Assistant:
+"Stanford CME295 Transformers.docx is present."
+
+Current Query:
+"What did I just ask you?"
+
+Correct result:
+
+rewritten_query = "What was my previous question?"
+intent = general
+document_action = none
+is_follow_up = true
 
 Return the result according to the provided structured schema.
 """
     ),
     (
         "human",
-        "Query: {query}"
+        """Previous User Query and response :
+{history}
+
+Current Query:
+{query}"""
     )
 ])
-
 
 
 

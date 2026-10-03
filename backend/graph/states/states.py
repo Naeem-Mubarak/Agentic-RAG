@@ -10,6 +10,8 @@ class Agent_state(TypedDict):
     intent : Literal["document","RAG","DB","general"]
     query : str
 
+    is_follow_up : bool
+
     document_action: Literal["list", "load", "none"] = "none"
     available_files : List[str]
     pdf_files : List[str]

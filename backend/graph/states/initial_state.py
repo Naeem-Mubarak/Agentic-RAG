@@ -14,6 +14,7 @@ def build_initial_state(query: str, folder_path: str = None, history: str = "") 
         "intent": None,
         "document_action": "none",
         "query": query,
+        "is_follow_up" : True,
         "available_files": [],
         "pdf_files": [],
         "selected_docs": [],

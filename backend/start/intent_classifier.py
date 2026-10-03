@@ -7,6 +7,9 @@ from typing import Literal
 # schema defining
 class user_intent(BaseModel):
 
+    rewritten_query: str
+    is_follow_up: bool
+
     intent : Literal["document","RAG", "DB","general"]
     document_action: Literal["list", "load", "none"] = "none"
 
@@ -31,11 +34,14 @@ def intent_classifier(state: Agent_state):
     chain = intent_classifier_prompt | structured_llm
 
     response = chain.invoke({
-        "query" : state['query']
+        "query" : state['query'],
+        "history" : state['message_history']
     })
 
 
     # state updation
+    state['query'] = response.rewritten_query
+    state['is_follow_up'] = response.is_follow_up
     state['intent'] = response.intent
     state['document_action'] = response.document_action
 
