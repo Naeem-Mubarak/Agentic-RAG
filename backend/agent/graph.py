@@ -13,11 +13,11 @@ from backend.rag.generation.irrelevant import irrelvent
 from backend.rag.generation.relevant import relevent
 from backend.rag.retrieval.retriever_evaluator import retriever_evaluator
 from backend.rag.retrieval.retriever_node import retriever
-from backend.rag.retrieval.websearch_mcp_client import web_search
-from backend.documents.graph.file_system_mcp_client import File_System_MCP
+from backend.mcp.clients.websearch_client import web_search
+from backend.mcp.clients.filesystem_client import File_System_MCP
 from backend.documents.graph.load_docs import load_docs
 from backend.documents.graph.document_ingestion import ingest_documents
-from backend.db_operation.db_mcp_client import DB_mcp
+from backend.mcp.clients.db_client import DB_mcp
 from backend.rag.generation.no_retrieval import no_search_response_generator
 
 
