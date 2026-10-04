@@ -1,6 +1,6 @@
 from backend.rag.retrieval.similarity_search import similarity_retreiver
 from backend.rag.retrieval.keyword_search import keyword_search
-from backend.rag.retrieval.RRF import RRF
+from backend.rag.retrieval.rrf import RRF
 
 
 def retriever_pipeline(query: str, top_k: int = 5):
