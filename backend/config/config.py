@@ -68,28 +68,28 @@ def db_connection(DB_URL):
 # =============================== MCP local server provider ===============================
 def file_system_server():
 
-    """Local file system mcp server provider"""
-    PROJECT_ROOT = Path(__file__).resolve().parent.parent
-    server_path = PROJECT_ROOT / "MCP_servers" / "file_system_server.py"
+   """Local file system mcp server provider"""
+   PROJECT_ROOT = Path(__file__).resolve().parents[2]
+   server_path = PROJECT_ROOT / "backend" / "mcp" / "servers" / "filesystem.py"
 
-    return server_path
+   return server_path
 
 
 
 def websearch_server():
 
-    """Local websearch mcp server provider"""
-    PROJECT_ROOT = Path(__file__).resolve().parent.parent
-    server_path = PROJECT_ROOT / "MCP_servers" / "web_search_server.py"
+   """Local websearch mcp server provider"""
+   PROJECT_ROOT = Path(__file__).resolve().parents[2]
+   server_path = PROJECT_ROOT / "backend" / "mcp" / "servers" / "web_search.py"
+   return server_path
 
-    return server_path
 
 
 def db_server():
 
    """local DB mcp server provider"""
-   PROJECT_ROOT = Path(__file__).resolve().parent.parent
-   server_path = PROJECT_ROOT / "MCP_servers" / "db_server.py"
+   PROJECT_ROOT = Path(__file__).resolve().parents[2]
+   server_path = PROJECT_ROOT / "backend" / "mcp" / "servers" / "database.py"
    
    return server_path
 
