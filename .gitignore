@@ -1,6 +1,4 @@
-RAG_documents/
-mcp_subgraph.ipynb
-
+uploads/
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]
