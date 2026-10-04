@@ -1,7 +1,7 @@
 from backend.agent.states.states import Agent_state
 from langgraph.types import Command
 from typing import Literal
-from backend.documents.ingestion.data_ingestion_pipeline import loading_chunking_embedding_storing
+from backend.documents.ingestion.pipeline import loading_chunking_embedding_storing
 from langgraph.graph import END
 
 

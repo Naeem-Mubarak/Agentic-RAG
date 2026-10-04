@@ -9,7 +9,7 @@ import json
 import difflib
 from pathlib import Path
 from fastmcp import Client
-from backend.documents.graph.helper_function_for_text_extraction import extract_text
+from backend.documents.graph.text_extraction import extract_text
 from backend.agent.states.states import Agent_state
 from backend.config.config import db_connection, DB_CONNECTION_URL, TABLE_NAME
 from psycopg2 import sql
