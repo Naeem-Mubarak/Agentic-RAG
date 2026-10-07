@@ -52,7 +52,7 @@ async function selectChat(threadId) {
   clearActivity();
   renderChatList();
 
-  messagesEl.innerHTML = "";
+  messagesInnerEl.innerHTML = "";
   const history = await api(`/chat/${threadId}`);
   history.forEach(turn => {
     if (turn.query) renderMessageBubble("user", turn.query);
@@ -192,7 +192,7 @@ function startActivity() {
   activityEl = document.createElement("div");
   activityEl.className = "activity";
   renderActivityEl();
-  messagesEl.appendChild(activityEl);
+  messagesInnerEl.appendChild(activityEl);
   scrollToBottom();
 }
 
@@ -258,7 +258,7 @@ function renderSourcesSection(items) {
     wrapper.querySelector(".sources-list").classList.toggle("hidden");
   };
 
-  messagesEl.appendChild(wrapper);
+  messagesInnerEl.appendChild(wrapper);
   scrollToBottom();
 }
 
@@ -283,6 +283,7 @@ async function uploadFile(file) {
 // ---------- rendering ----------
 
 const messagesEl = document.getElementById("messages");
+const messagesInnerEl = document.getElementById("messagesInner");
 
 function renderMarkdownInto(el, text) {
   el.innerHTML = marked.parse(text || "");
@@ -296,7 +297,7 @@ function renderMessageBubble(role, content, markdown = false) {
   } else {
     div.textContent = content;
   }
-  messagesEl.appendChild(div);
+  messagesInnerEl.appendChild(div);
   scrollToBottom();
   return div;
 }
@@ -310,7 +311,7 @@ function scrollToBottom() {
 }
 
 function updateEmptyState() {
-  const isEmpty = messagesEl.children.length === 0;
+  const isEmpty = messagesInnerEl.children.length === 0;
   document.getElementById("emptyState").classList.toggle("hidden", !isEmpty);
   messagesEl.classList.toggle("hidden", isEmpty);
 }
