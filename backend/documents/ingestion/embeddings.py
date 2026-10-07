@@ -107,7 +107,7 @@ def embedding_chunks(chunks, batch_size : int = 100):
             "metadata" : metadata[i]
         })
 
-    print("Chunks with Embeddings are ready")
+    print(f"Chunks with Embeddings are ready using: {model_used}")
     return chunks_with_embedding
 
 
