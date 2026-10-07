@@ -37,7 +37,7 @@ def embedding_generation(texts):
             return embedding, model_used
 
         except Exception as e:
-            pass
+            print(f"HF embedding failed, falling back to Gemini: {e}")
 
     try:
 

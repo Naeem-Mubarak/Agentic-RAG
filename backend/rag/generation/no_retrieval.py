@@ -1,10 +1,10 @@
 from backend.agent.states.states import Agent_state
 from langchain_core.output_parsers import StrOutputParser
-from backend.config.config import no_retrieval_response_prompt, Gemini_model_provider
+from backend.config.config import no_retrieval_response_prompt, general_model
 from langchain_core.prompts import ChatPromptTemplate
 
 
-model = Gemini_model_provider()
+model = general_model()
 
 def no_search_response_generator(state : Agent_state):
 

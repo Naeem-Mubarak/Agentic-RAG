@@ -62,7 +62,7 @@ UPLOAD_DIR.mkdir(exist_ok=True)
 # Nodes whose LLM output should be streamed token-by-token to the client.
 # Everything else (classification, tool-calling agents, confirmation checks)
 # runs silently -- only these three ever produce a user-facing generated answer.
-STREAMING_NODES = ("relevant", "not_relevant", "ambiguis")
+STREAMING_NODES = ("relevant", "not_relevant", "ambiguis", "no_search_response")
 
 # Human-readable labels for the "agent working" indicator -- one entry per
 # REAL node in the graph. Nothing invented here: each label only ever shows

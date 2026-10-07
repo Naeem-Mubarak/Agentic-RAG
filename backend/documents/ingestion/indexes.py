@@ -3,14 +3,13 @@ from backend.config.config import DB_CONNECTION_URL, db_connection, TABLE_NAME
 
 
 
-conn, cursor = db_connection(DB_CONNECTION_URL)
-
 
 def create_HNSW_index(table_name: str = TABLE_NAME):
 
     """Creating HNSW index for fast search"""
 
     try: 
+        conn, cursor = db_connection(DB_CONNECTION_URL)
         cursor.execute(
         sql.SQL("""
                 CREATE INDEX IF NOT EXISTS 
@@ -32,7 +31,7 @@ def create_HNSW_index(table_name: str = TABLE_NAME):
 def GIN_index(table_name: str  = TABLE_NAME):
 
     try:
-
+        conn, cursor = db_connection(DB_CONNECTION_URL)
         cursor.execute(
             sql.SQL("""CREATE INDEX IF NOT EXISTS
             rag_docs_content_tsv_idx

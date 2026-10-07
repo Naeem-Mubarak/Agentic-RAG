@@ -1,9 +1,6 @@
 from backend.config.config import db_connection, DB_CONNECTION_URL, TABLE_NAME
 from psycopg2 import sql
 
-conn, cursor = db_connection(DB_CONNECTION_URL)
-
-
 
 def keyword_search(query: str, table_name :str = TABLE_NAME,top_k: int = 5):
 

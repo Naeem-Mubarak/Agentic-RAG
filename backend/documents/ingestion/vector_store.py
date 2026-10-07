@@ -3,7 +3,7 @@ from psycopg2 import sql
 from psycopg2.extras import Json
 
 
-conn, cursor = db_connection(DB_CONNECTION_URL)
+
 
 
 def clean_text(value):
@@ -26,6 +26,7 @@ def vector_store(chunks_with_embedding : list, table_name: str):
     """
 
     try:
+        conn, cursor = db_connection(DB_CONNECTION_URL)
 
         for chunk in chunks_with_embedding:
 
