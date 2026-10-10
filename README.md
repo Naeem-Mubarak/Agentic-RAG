@@ -90,35 +90,45 @@ At a high level, the application consists of a frontend, a FastAPI service, a La
 
 ```text
 Agentic-RAG/
-├── assets/
-│   └── architecture.png
-├── backend/
-│   ├── agent/
-│   │   ├── fallback/       # Fallback handling
-│   │   ├── start/          # Intent classification and routing
-│   │   ├── states/         # Shared LangGraph state
-│   │   └── graph.py        # Main agent graph
-│   ├── config/
-│   │   └── config.py       # Models, prompts, database and MCP configuration
-│   ├── documents/
-│   │   ├── graph/          # Document discovery and ingestion workflow
-│   │   └── ingestion/      # Chunking, embeddings, storage and indexes
-│   ├── mcp/
-│   │   ├── clients/        # MCP clients used by the agent
-│   │   └── servers/        # Filesystem, database and web-search tools
-│   ├── rag/
-│   │   ├── generation/     # Answer paths and relevance handling
-│   │   ├── refinement/     # Document classification and context refinement
-│   │   └── retrieval/      # Hybrid retrieval, evaluation and RRF
-│   └── app.py              # FastAPI application
-├── db_setup/               # Database and table setup scripts
-├── frontend/
-│   ├── index.html
-│   ├── app.js
-│   └── style.css
-├── pyproject.toml
-├── uv.lock
-└── README.md
+│
+├── 📂 assets/
+│   └── 📄 architecture.png       # System architecture diagram
+│
+├── 📂 backend/
+│   ├── 📂 agent/
+│   │   ├── 📂 fallback/          # Fallback handling
+│   │   ├── 📂 start/             # Intent classification and routing
+│   │   ├── 📂 states/            # Shared LangGraph state
+│   │   └── 📄 graph.py           # Main agent graph
+│   │
+│   ├── 📂 config/
+│   │   └── 📄 config.py          # Models, prompts, database and MCP config
+│   │
+│   ├── 📂 documents/
+│   │   ├── 📂 graph/             # Document discovery and ingestion workflow
+│   │   └── 📂 ingestion/         # Chunking, embeddings, storage and indexes
+│   │
+│   ├── 📂 mcp/
+│   │   ├── 📂 clients/           # MCP clients used by the agent
+│   │   └── 📂 servers/           # Filesystem, database and web-search tools
+│   │
+│   ├── 📂 rag/
+│   │   ├── 📂 generation/        # Answer generation and relevance handling
+│   │   ├── 📂 refinement/        # Document classification and context refinement
+│   │   └── 📂 retrieval/         # Hybrid retrieval, evaluation and RRF
+│   │
+│   └── 📄 app.py                # FastAPI application
+│
+├── 📂 db_setup/                 # Database and table setup scripts
+│
+├── 📂 frontend/
+│   ├── 📄 index.html             # Web application entry point
+│   ├── 📄 app.js                 # Frontend behavior and API integration
+│   └── 📄 style.css              # UI styling
+│
+├── 📄 pyproject.toml             # Project metadata and dependencies
+├── 📄 uv.lock                   # Locked dependency versions
+└── 📄 README.md                 # Project documentation
 ```
 
 ## How Retrieval Works
