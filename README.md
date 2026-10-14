@@ -205,7 +205,7 @@ uv run python -m db_setup.db_pipeline
 ### 5. Start the backend
 
 ```bash
-uv run uvicorn backend.app:app --reload
+uv run uvicorn backend.app:app --reload --host 0.0.0.0 --port 8000
 ```
 
 FastAPI will expose the backend locally (Uvicorn defaults to port `8000`).
