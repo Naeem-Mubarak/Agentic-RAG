@@ -73,6 +73,7 @@ The orchestration layer is implemented as a **LangGraph state graph**. A request
 - **Duplicate protection** — skips documents already present in the database.
 - **Human-in-the-loop document selection** — LangGraph interrupts allow confirmation before document ingestion.
 - **Persistent chat history** — PostgreSQL-backed conversations and message history.
+- **LangSmith observability** — traces and monitors LangChain/LangGraph execution for debugging and inspecting agent behavior.
 - **Streaming UI** — FastAPI Server-Sent Events stream live agent stages, tokens, messages, and sources.
 - **Source attribution** — responses can expose the documents or web sources actually used.
 - **Embedding fallback** — supports Hugging Face inference with Gemini embedding fallback.
@@ -105,6 +106,7 @@ RRF allows the system to combine rankings without requiring the raw scores produ
 | Layer | Technology |
 | --- | --- |
 | Agent orchestration | LangGraph |
+| Observability / tracing | LangSmith |
 | LLM / AI integration | LangChain, Google Gemini, Groq |
 | Tool protocol | MCP, FastMCP |
 | API | FastAPI |
@@ -188,6 +190,7 @@ The codebase integrates with:
 - Google Gemini for embeddings/model access;
 - Groq for model access;
 - Tavily for web search;
+- LangSmith for tracing and observability;
 - PostgreSQL for document vectors and chat persistence.
 
 > Keep API keys and database credentials out of source control. The repository's `.gitignore` should be used to exclude local secrets.
@@ -276,4 +279,4 @@ This repository is licensed under the terms provided in the [LICENSE](LICENSE) f
 
 **Naeem Mubarak**
 
-Built as an engineering-focused exploration of agentic AI, Retrieval-Augmented Generation, LangGraph, MCP, hybrid search, and production-oriented LLM application architecture.
+Built as an engineering-focused exploration of agentic AI, Retrieval-Augmented Generation, LangGraph, MCP, LangSmith observability, hybrid search, and production-oriented LLM application architecture.
