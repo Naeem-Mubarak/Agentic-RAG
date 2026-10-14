@@ -6,13 +6,12 @@ let pendingAgentEl = null;
 let pendingAgentText = "";
 let browseCurrentPath = null;
 let activeAbortController = null;
+let formalMode = false;
+let sessionUploadCount = 0;
 
-// Activity indicator state (the "agent working" panel)
 let activityEl = null;
 let activityStages = [];
 let activityExpanded = true;
-
-// ---------- small helpers ----------
 
 function escapeHtml(str) {
   const div = document.createElement("div");
@@ -87,13 +86,17 @@ async function sendMessage(text) {
   startActivity();
   setStreamingUI(true);
 
+  const outgoing = formalMode
+    ? `Please respond in a formal, professional tone.\n\n${text}`
+    : text;
+
   activeAbortController = new AbortController();
 
   try {
     const res = await fetch(`${API_BASE}/message-stream`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ thread_id: activeChatId, message: text }),
+      body: JSON.stringify({ thread_id: activeChatId, message: outgoing }),
       signal: activeAbortController.signal
     });
 
@@ -117,6 +120,7 @@ async function sendMessage(text) {
 
     await loadChatList();
     renderChatList();
+    loadRecentPrompts();
 
   } catch (err) {
     clearActivity();
@@ -133,11 +137,9 @@ async function sendMessage(text) {
 
 function handleServerMessage(data) {
   switch (data.type) {
-
     case "stage":
       addActivityStage(data.content);
       break;
-
     case "token":
       finishActivity();
       if (!pendingAgentEl) {
@@ -148,29 +150,22 @@ function handleServerMessage(data) {
       pendingAgentEl.textContent = pendingAgentText;
       scrollToBottom();
       break;
-
     case "message":
       finishActivity();
       renderMessageBubble("agent", data.content, true);
       break;
-
     case "interrupt":
       finishActivity();
       renderMessageBubble("interrupt", data.content, true);
       break;
-
     case "sources":
       renderSourcesSection(data.items);
       break;
-
     case "done":
-      if (pendingAgentEl) {
-        renderMarkdownInto(pendingAgentEl, pendingAgentText);
-      }
+      if (pendingAgentEl) renderMarkdownInto(pendingAgentEl, pendingAgentText);
       finishStreamingIfAny();
       clearActivity();
       break;
-
     case "error":
       finishActivity();
       clearActivity();
@@ -206,7 +201,6 @@ function addActivityStage(label) {
 function renderActivityEl() {
   if (!activityEl) return;
   const latest = activityStages[activityStages.length - 1] || "Working...";
-
   activityEl.innerHTML = `
     <button type="button" class="activity-toggle">
       <span class="activity-dot"></span>
@@ -218,7 +212,6 @@ function renderActivityEl() {
         ${activityStages.map(s => `<div class="activity-step">${escapeHtml(s)}</div>`).join("")}
       </div>` : ""}
   `;
-
   activityEl.querySelector(".activity-toggle").onclick = () => {
     activityExpanded = !activityExpanded;
     renderActivityEl();
@@ -226,10 +219,7 @@ function renderActivityEl() {
 }
 
 function finishActivity() {
-  if (activityEl) {
-    activityExpanded = false;
-    renderActivityEl();
-  }
+  if (activityEl) { activityExpanded = false; renderActivityEl(); }
 }
 
 function clearActivity() {
@@ -241,7 +231,6 @@ function clearActivity() {
 
 function renderSourcesSection(items) {
   if (!items || items.length === 0) return;
-
   const wrapper = document.createElement("div");
   wrapper.className = "sources";
   wrapper.innerHTML = `
@@ -253,11 +242,9 @@ function renderSourcesSection(items) {
       ).join("")}
     </div>
   `;
-
   wrapper.querySelector(".sources-toggle").onclick = () => {
     wrapper.querySelector(".sources-list").classList.toggle("hidden");
   };
-
   messagesInnerEl.appendChild(wrapper);
   scrollToBottom();
 }
@@ -275,9 +262,47 @@ async function uploadFile(file) {
     const data = await res.json();
     if (!res.ok) throw new Error(data.detail || "Upload failed");
     renderSystemNote(data.message);
+    sessionUploadCount += 1;
+    updateIngestionCount();
   } catch (err) {
     renderSystemNote(`Upload failed: ${err.message}`);
   }
+}
+
+function updateIngestionCount() {
+  document.getElementById("ingestionCount").textContent =
+    `${sessionUploadCount} file(s) uploaded this session`;
+}
+
+// ---------- recent prompts ----------
+
+async function loadRecentPrompts() {
+  try {
+    const data = await api("/recent_prompts?limit=6");
+    renderRecentPrompts(data.prompts);
+  } catch (err) {
+    // non-critical -- just leave the panel empty
+  }
+}
+
+function renderRecentPrompts(prompts) {
+  const el = document.getElementById("recentPrompts");
+  el.innerHTML = "";
+
+  if (!prompts || prompts.length === 0) {
+    el.innerHTML = `<div class="recent-prompts-empty">No prompts yet</div>`;
+    return;
+  }
+
+  prompts.forEach(p => {
+    const chip = document.createElement("button");
+    chip.type = "button";
+    chip.className = "recent-prompt-chip";
+    chip.textContent = p;
+    chip.title = p;
+    chip.onclick = () => sendMessage(p);
+    el.appendChild(chip);
+  });
 }
 
 // ---------- rendering ----------
@@ -343,9 +368,7 @@ function renderChatList() {
   listEl.innerHTML = "";
 
   const query = (document.getElementById("searchInput").value || "").toLowerCase().trim();
-  const filtered = query
-    ? chats.filter(c => c.title.toLowerCase().includes(query))
-    : chats;
+  const filtered = query ? chats.filter(c => c.title.toLowerCase().includes(query)) : chats;
 
   if (filtered.length === 0) {
     const empty = document.createElement("div");
@@ -359,7 +382,6 @@ function renderChatList() {
 
   Object.entries(groups).forEach(([label, group]) => {
     if (group.length === 0) return;
-
     const heading = document.createElement("div");
     heading.className = "chat-group-label";
     heading.textContent = label;
@@ -397,20 +419,37 @@ function setStreamingUI(isStreaming) {
   document.getElementById("textInput").disabled = isStreaming;
 }
 
+// ---------- theme + formal mode ----------
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute("data-theme", theme);
+  const isDark = theme === "dark";
+  document.getElementById("themeToggleIcon").textContent = isDark ? "\u2600" : "\u263D";
+  document.getElementById("themeToggleLabel").textContent = isDark ? "Light mode" : "Dark mode";
+  localStorage.setItem("theme", theme);
+}
+
+function toggleTheme() {
+  const current = document.documentElement.getAttribute("data-theme") || "light";
+  applyTheme(current === "dark" ? "light" : "dark");
+}
+
+function toggleFormalMode() {
+  formalMode = !formalMode;
+  document.getElementById("formalToggleBtn").classList.toggle("active", formalMode);
+}
+
 // ---------- settings ----------
 
 async function checkFolderStatus(path) {
   const badge = document.getElementById("folderStatusBadge");
-
   if (!path) {
     badge.textContent = "Not configured";
     badge.className = "status-badge status-warn";
     return;
   }
-
   badge.textContent = "Checking\u2026";
   badge.className = "status-badge status-unknown";
-
   try {
     await api(`/browse-folder?path=${encodeURIComponent(path)}`);
     badge.textContent = "Ready";
@@ -422,17 +461,24 @@ async function checkFolderStatus(path) {
 }
 
 async function openSettings() {
-  const settings = await api("/setting");
-  document.getElementById("folderPathInput").value = settings.folder_path || "";
   document.getElementById("settingsModal").classList.remove("hidden");
-  checkFolderStatus(settings.folder_path);
+  try {
+    const settings = await api("/setting");
+    document.getElementById("folderPathInput").value = settings.folder_path || "";
+    checkFolderStatus(settings.folder_path);
+  } catch (err) {
+    const badge = document.getElementById("folderStatusBadge");
+    badge.textContent = "Error";
+    badge.className = "status-badge status-error";
+    alert(`Could not load current settings: ${err.message}`);
+  }
 }
 
 function closeSettings() {
   document.getElementById("settingsModal").classList.add("hidden");
 }
 
-// ---------- folder browser (no native dialog -- works in any environment) ----------
+// ---------- folder browser ----------
 
 async function openBrowseModal() {
   document.getElementById("browseModal").classList.remove("hidden");
@@ -457,7 +503,6 @@ async function loadBrowseDirectory(path) {
 
 function renderBrowseModal(data) {
   document.getElementById("browsePath").textContent = data.current_path;
-
   const listEl = document.getElementById("browseList");
   listEl.innerHTML = "";
 
@@ -502,6 +547,8 @@ document.getElementById("browseFolderBtn").onclick = openBrowseModal;
 document.getElementById("cancelBrowseBtn").onclick = closeBrowseModal;
 document.getElementById("collapseSidebarBtn").onclick = () => setSidebarCollapsed(true);
 document.getElementById("expandSidebarBtn").onclick = () => setSidebarCollapsed(false);
+document.getElementById("themeToggleBtn").onclick = toggleTheme;
+document.getElementById("formalToggleBtn").onclick = toggleFormalMode;
 
 document.getElementById("searchInput").addEventListener("input", renderChatList);
 
@@ -541,15 +588,9 @@ textInputEl.addEventListener("keydown", (e) => {
 
 document.getElementById("composer").onsubmit = (e) => {
   e.preventDefault();
-
-  if (activeAbortController) {
-    activeAbortController.abort();
-    return;
-  }
-
+  if (activeAbortController) { activeAbortController.abort(); return; }
   const text = textInputEl.value.trim();
   if (!text) return;
-
   textInputEl.value = "";
   textInputEl.style.height = "auto";
   sendMessage(text);
@@ -565,25 +606,27 @@ document.getElementById("fileInput").onchange = (e) => {
   e.target.value = "";
 };
 
+// click-to-upload (sidebar dropzone)
+const dropzone = document.getElementById("dropzone");
+
+dropzone.addEventListener("click", () => document.getElementById("fileInput").click());
+
 // ---------- boot ----------
 
 (async function boot() {
+  applyTheme(localStorage.getItem("theme") || "light");
+
   if (localStorage.getItem("sidebarCollapsed") === "1") {
     setSidebarCollapsed(true);
   }
 
   await loadChatList();
+  loadRecentPrompts();
+  updateIngestionCount();
 
   if (chats.length === 0) {
     await createChat();
   } else {
     await selectChat(chats[0].thread_id);
-  }
-
-  const settings = await api("/setting");
-  if (!settings.folder_path) {
-    // Don't force the modal open -- general chat and web-search questions
-    // work without a folder. The empty state and settings status badge
-    // already make it clear when one is needed.
   }
 })();

@@ -14,34 +14,71 @@
 <div class="app">
 
   <aside class="sidebar" id="sidebar">
-    <div class="sidebar-top">
-      <div class="brand">
-        <span class="brand-mark">&#9671;</span>
-        <span class="brand-name label">Agentic RAG</span>
+
+    <div class="workspace-card">
+      <span class="brand-mark">&#9671;</span>
+      <div>
+        <div class="workspace-label">Workspace</div>
+        <div class="workspace-name">Agentic RAG</div>
       </div>
-      <button id="collapseSidebarBtn" class="icon-btn-plain label" title="Collapse sidebar">&#10094;</button>
     </div>
 
     <button id="newChatBtn" class="new-chat-btn">
       <span class="plus">+</span>
-      <span class="label">New chat</span>
+      <span>New chat</span>
     </button>
 
-    <div class="search-row label">
+    <div class="search-row">
       <input id="searchInput" type="text" placeholder="Search chats" class="search-input" autocomplete="off" />
     </div>
 
-    <div id="chatList" class="chat-list"></div>
+    <div class="sidebar-scroll">
+
+      <div id="chatList" class="chat-list"></div>
+
+      <div class="side-card">
+        <div class="card-label">Document ingestion</div>
+        <div id="dropzone" class="dropzone">
+          <span class="dropzone-icon">&#8679;</span>
+          <p>Click to select a PDF</p>
+          <small>Supported: PDF (max 20MB)</small>
+        </div>
+        <div id="ingestionCount" class="ingestion-count">0 file(s) uploaded this session</div>
+      </div>
+
+      <div class="side-card">
+        <div class="card-label">Recent prompts</div>
+        <div id="recentPrompts" class="recent-prompts"></div>
+      </div>
+
+    </div>
 
     <button id="settingsBtn" class="settings-btn">
       <span class="gear">&#9881;</span>
-      <span class="label">Settings</span>
+      <span>Settings</span>
     </button>
   </aside>
 
   <button id="expandSidebarBtn" class="expand-sidebar-btn hidden" title="Open sidebar">&#10095;</button>
 
   <main class="main">
+
+    <div class="chat-header">
+      <div>
+        <div class="chat-header-title">Agentic RAG</div>
+        <div class="chat-header-subtitle" id="chatSubtitle">Ask about your documents, search the web, or check the database.</div>
+      </div>
+      <div class="chat-header-actions">
+        <button type="button" id="themeToggleBtn" class="header-toggle" title="Toggle theme">
+          <span id="themeToggleIcon">&#9789;</span>
+          <span id="themeToggleLabel">Dark mode</span>
+        </button>
+        <button type="button" id="formalToggleBtn" class="header-toggle" title="Respond formally">
+          Formal mode
+        </button>
+        <button type="button" id="collapseSidebarBtn" class="icon-btn-plain" title="Collapse sidebar">&#10094;</button>
+      </div>
+    </div>
 
     <div id="emptyState" class="empty-state">
       <div class="empty-state-inner">
@@ -51,7 +88,7 @@
         <div class="suggestions">
           <button type="button" class="suggestion-chip" data-prompt="How many files are in the database?">How many files are in the database?</button>
           <button type="button" class="suggestion-chip" data-prompt="What documents are available in my folder?">What documents are available in my folder?</button>
-          <button type="button" class="suggestion-chip" data-prompt="Is there a PDF about transformers in my documents?">Is there a PDF about transformers in my documents?</button>
+          <button type="button" class="suggestion-chip" data-prompt="What can you help me with?">What can you help me with?</button>
         </div>
       </div>
     </div>
@@ -63,7 +100,7 @@
     <form id="composer" class="composer">
       <input id="fileInput" type="file" accept="application/pdf" hidden />
       <button type="button" id="attachBtn" class="icon-btn" title="Upload a document">+</button>
-      <textarea id="textInput" rows="1" placeholder="Message the agent..."></textarea>
+      <textarea id="textInput" rows="1" placeholder="Ask a question about your documents..."></textarea>
       <button type="submit" id="sendBtn" class="send-btn" title="Send">&#10148;</button>
     </form>
 
