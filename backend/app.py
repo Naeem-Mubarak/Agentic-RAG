@@ -212,6 +212,37 @@ def delete_chat(thread_id: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.get("/recent_prompts")
+def recent_prompts(limit: int = 6):
+    """
+    Most recent distinct user queries across all chats, for the sidebar's
+    quick-access list -- real data already sitting in chat_history, just
+    surfaced; nothing fabricated.
+    """
+    try:
+        cursor.execute(
+            sql.SQL("SELECT query FROM {} ORDER BY created_at DESC LIMIT %s").format(
+                sql.Identifier(CHAT_HISTORY)
+            ),
+            (limit * 3,)  # over-fetch since duplicates get collapsed below
+        )
+        rows = cursor.fetchall()
+
+        seen = set()
+        prompts = []
+        for (q,) in rows:
+            text = q.get("content", "") if isinstance(q, dict) else q
+            if text and text not in seen:
+                seen.add(text)
+                prompts.append(text)
+            if len(prompts) >= limit:
+                break
+
+        return {"prompts": prompts}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 # ============================================================
 # History helpers -- shared by the streaming endpoint
 # ============================================================
