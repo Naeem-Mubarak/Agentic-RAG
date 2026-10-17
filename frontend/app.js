@@ -7,7 +7,6 @@ let pendingAgentText = "";
 let browseCurrentPath = null;
 let activeAbortController = null;
 let formalMode = false;
-let sessionUploadCount = 0;
 
 let activityEl = null;
 let activityStages = [];
@@ -120,7 +119,6 @@ async function sendMessage(text) {
 
     await loadChatList();
     renderChatList();
-    loadRecentPrompts();
 
   } catch (err) {
     clearActivity();
@@ -262,47 +260,9 @@ async function uploadFile(file) {
     const data = await res.json();
     if (!res.ok) throw new Error(data.detail || "Upload failed");
     renderSystemNote(data.message);
-    sessionUploadCount += 1;
-    updateIngestionCount();
   } catch (err) {
     renderSystemNote(`Upload failed: ${err.message}`);
   }
-}
-
-function updateIngestionCount() {
-  document.getElementById("ingestionCount").textContent =
-    `${sessionUploadCount} file(s) uploaded this session`;
-}
-
-// ---------- recent prompts ----------
-
-async function loadRecentPrompts() {
-  try {
-    const data = await api("/recent_prompts?limit=6");
-    renderRecentPrompts(data.prompts);
-  } catch (err) {
-    // non-critical -- just leave the panel empty
-  }
-}
-
-function renderRecentPrompts(prompts) {
-  const el = document.getElementById("recentPrompts");
-  el.innerHTML = "";
-
-  if (!prompts || prompts.length === 0) {
-    el.innerHTML = `<div class="recent-prompts-empty">No prompts yet</div>`;
-    return;
-  }
-
-  prompts.forEach(p => {
-    const chip = document.createElement("button");
-    chip.type = "button";
-    chip.className = "recent-prompt-chip";
-    chip.textContent = p;
-    chip.title = p;
-    chip.onclick = () => sendMessage(p);
-    el.appendChild(chip);
-  });
 }
 
 // ---------- rendering ----------
@@ -606,12 +566,8 @@ document.getElementById("fileInput").onchange = (e) => {
   e.target.value = "";
 };
 
-// click-to-upload (sidebar dropzone)
-const dropzone = document.getElementById("dropzone");
-
-dropzone.addEventListener("click", () => document.getElementById("fileInput").click());
-
 // ---------- boot ----------
+
 
 (async function boot() {
   applyTheme(localStorage.getItem("theme") || "light");
@@ -620,13 +576,15 @@ dropzone.addEventListener("click", () => document.getElementById("fileInput").cl
     setSidebarCollapsed(true);
   }
 
-  await loadChatList();
-  loadRecentPrompts();
-  updateIngestionCount();
+  try {
+    await loadChatList();
 
-  if (chats.length === 0) {
-    await createChat();
-  } else {
-    await selectChat(chats[0].thread_id);
+    if (chats.length === 0) {
+      await createChat();
+    } else {
+      await selectChat(chats[0].thread_id);
+    }
+  } catch (err) {
+    console.error("Failed to load chats:", err);
   }
 })();
