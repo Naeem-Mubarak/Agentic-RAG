@@ -310,7 +310,18 @@ This includes:
 **RAG**
 
 The user wants information, an explanation, an answer, summary, comparison,
-or other knowledge that requires information from the user's documents.
+or other knowledge-based response. This includes questions about the user's
+own documents AND general knowledge, factual, or current-events questions
+that are not about the user's documents at all.
+
+The retrieval system automatically searches the user's local documents
+first; if local documents do not contain relevant information, it falls back
+to a live web search. You do NOT need to determine in advance whether the
+user's documents will actually contain the answer -- that judgment is made
+later, after retrieval, by a separate relevance-grading step. Your only job
+here is to recognize that the query is a genuine request for information or
+explanation (as opposed to document/database management, or casual
+conversation with no information need).
 
 This includes:
 - asking about document content
@@ -320,20 +331,33 @@ This includes:
 - summarizing documents
 - comparing documents
 - answering questions using information contained in documents
+- general knowledge questions ("What is the capital of France?")
+- current events or recent developments ("What's the latest news about AI?",
+  "What model did X release recently?")
+- factual or explanatory questions unrelated to the user's own documents
+  ("Explain how photosynthesis works.")
 
 **general**
 
-The user's query does not require access to the user's documents,
-filesystem, database, or document retrieval.
+The user's query is purely conversational and carries no request for
+information, explanation, or knowledge of any kind. It also covers
+meta-questions about the conversation itself or about the assistant's own
+capabilities.
 
 This includes:
 - greetings
 - thanks
 - acknowledgements
-- casual conversation
-- simple conversational statements
-- general questions that can be answered without the user's documents
-- requests that do not require filesystem, database, or RAG capabilities
+- casual conversational statements with no informational request
+  ("How are you?", "That's interesting.")
+- questions about the conversation itself ("What did I just ask you?")
+- questions about the assistant's own capabilities or identity
+  ("What can you do?", "Are you an AI?")
+
+IMPORTANT: A real question seeking information, an explanation, a fact, a
+summary, or an answer of any kind is NEVER `general`, even if it has nothing
+to do with the user's documents. Route it to `RAG` instead -- see the RAG
+definition above.
 
 --------------------------------------------------
 FOLLOW-UP QUERY HANDLING
@@ -554,6 +578,24 @@ DIRECT QUERY EXAMPLES
 → document_action=none
 → is_follow_up=false
 
+"What's the latest news about AI?"
+→ rewritten_query="What's the latest news about AI?"
+→ intent=RAG
+→ document_action=none
+→ is_follow_up=false
+
+"What model did DeepSeek release most recently?"
+→ rewritten_query="What model did DeepSeek release most recently?"
+→ intent=RAG
+→ document_action=none
+→ is_follow_up=false
+
+"What is the capital of France?"
+→ rewritten_query="What is the capital of France?"
+→ intent=RAG
+→ document_action=none
+→ is_follow_up=false
+
 "Hello."
 → rewritten_query="Hello."
 → intent=general
@@ -657,13 +699,17 @@ IMPORTANT AMBIGUITY RULES
 3. If the query asks about the CONTENT or KNOWLEDGE contained in a document,
    classify it as `RAG`, not `document`.
 
-4. Do not classify a query as `RAG` merely because its topic is related to
-   the documents. RAG should be selected when information from the documents
-   is actually relevant to answering the query.
+4. RAG is the correct intent for ANY genuine information-seeking question --
+   whether or not it relates to the user's documents. Do not route a real
+   question to `general` just because it is unrelated to the user's
+   documents; `general` is reserved for queries with no information request
+   at all (greetings, acknowledgements, meta-questions about the
+   conversation or the assistant itself).
 
-5. If the query is casual, conversational, or does not require access to the
-   user's documents, database, filesystem, or document retrieval, classify it
-   as `general`.
+5. Classify as `general` only if the query is purely casual or
+   conversational and makes no request for information, explanation, or
+   knowledge of any kind -- not merely because it is unrelated to the
+   user's documents, database, or filesystem.
 
 6. If the query contains multiple signals, determine the user's PRIMARY
    requested action.
@@ -1391,12 +1437,16 @@ Your task is to answer the user's latest message using:
 3. Your general language knowledge when appropriate.
 
 IMPORTANT:
-- No documents were retrieved for this request.
-- No web search results are available.
-- No database or external tool results are available.
+- No documents were retrieved for THIS request, and no web search was
+  performed for THIS request, because it was classified as conversational.
 - Do NOT claim or imply that you searched, retrieved, or verified information
-  from the user's documents.
+  for this specific response.
 - Do NOT invent document content, citations, sources, or search results.
+- If the user directly asks whether you have document retrieval, database
+  access, or web search capability, answer honestly: yes, this system can
+  search the user's documents, check a stored database, and perform live web
+  searches -- those tools simply were not used for this particular
+  conversational message.
 
 CONVERSATION HISTORY:
 {history}
@@ -1424,9 +1474,11 @@ Follow these rules:
    fabricate an answer from the documents. Clearly state that the relevant
    document content is not available in the current context.
 
-6. If the user asks about something that requires current or externally
-   verified information, do not claim that you verified it. Explain that
-   external search is not available for this response when necessary.
+6. If the user asks something that would require current or externally
+verified information, do not fabricate an answer. Explain that this
+specific response did not use retrieval or web search (since it was
+    classified as general conversation), and that asking the question more
+    directly will trigger the appropriate retrieval or search capability.
 
 7. If the user is simply acknowledging, greeting, thanking, or making a
    casual statement, respond naturally and briefly.
