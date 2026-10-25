@@ -1,5 +1,6 @@
 import json
 import uuid
+import tiktoken
 from pathlib import Path
 
 from fastapi import FastAPI, UploadFile, HTTPException, File
@@ -277,6 +278,42 @@ def load_history_as_text(thread_id: str) -> str:
     return "\n".join(lines)
 
 
+# Rough, model-agnostic token estimate for budgeting history length. tiktoken
+# has no official encoding for Groq/Gemini's own tokenizers, but cl100k_base
+# (OpenAI's general-purpose encoding) is a standard, widely-used stand-in for
+# this kind of budget check across providers -- close enough to size a
+# context window safely, not an exact per-model count.
+_tokenizer = tiktoken.get_encoding("cl100k_base")
+MAX_HISTORY_TOKENS = 3000
+
+
+def truncate_history(history_text: str, max_tokens: int = MAX_HISTORY_TOKENS) -> str:
+    """
+    Caps the conversation history passed to the model, keeping the most
+    recent turns and dropping older ones once the token budget is exceeded.
+    Encodes the full history, slices to the last `max_tokens` tokens, decodes
+    back to text -- then snaps forward to the next clean "User:" line, since
+    a raw token cut can land mid-sentence and token boundaries don't align
+    with turn boundaries.
+    """
+    if not history_text:
+        return history_text
+
+    tokens = _tokenizer.encode(history_text)
+    if len(tokens) <= max_tokens:
+        return history_text
+
+    truncated_tokens = tokens[-max_tokens:]
+    truncated_text = _tokenizer.decode(truncated_tokens)
+
+    marker = "\nUser:"
+    idx = truncated_text.find(marker)
+    if idx != -1:
+        truncated_text = truncated_text[idx + 1:]  # +1 drops the leading \n
+
+    return truncated_text
+
+
 def save_turn(thread_id: str, query_text: str, response_text: str):
     """
     Stores one turn as a Human/AI message pair. Columns are JSONB, so dicts
@@ -348,7 +385,7 @@ async def message_stream(data: MessageSchema):
             if pending_question and is_confirmation(pending_question, user_message):
                 graph_input = Command(resume=user_message)
             else:
-                history_text = load_history_as_text(thread_id)
+                history_text = truncate_history(load_history_as_text(thread_id))
                 graph_input = build_initial_state(user_message, folder_path, history_text)
 
             state = None
