@@ -20,11 +20,18 @@ def websearch(query: str):
         max_results=2
     )
 
-    results = websearch.invoke({
-        "query" : query
-    })
+    try:
+        results = websearch.invoke({
+            "query": query
+        })
 
-    return json.dumps(results)
+        return results
+
+    except Exception as e:
+        return {
+            "error": str(e),
+            "error_type": type(e).__name__
+        }
 
 
 
