@@ -69,8 +69,9 @@ def websearch(query: str):
 
     websearch = TavilySearch(
         tavily_api_key=tavily_api_key,
-        max_results=6,
+        max_results=8,
         search_depth="advanced",
+        topic="news" if freshness else "general",
         time_range=freshness,
     )
 
