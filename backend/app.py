@@ -367,6 +367,26 @@ class MessageSchema(BaseModel):
     message: str
 
 
+def _content_to_text(content) -> str:
+    """
+    Normalize LangChain message content into plain text before it crosses
+    the SSE boundary.
+    """
+    if isinstance(content, str):
+        return content
+    if isinstance(content, dict):
+        text = content.get("text")
+        if isinstance(text, str):
+            return text
+        nested = content.get("content")
+        if nested is not None:
+            return _content_to_text(nested)
+        return ""
+    if isinstance(content, (list, tuple)):
+        return "".join(_content_to_text(item) for item in content)
+    return ""
+
+
 async def sse_event(msg_type: str, **fields) -> str:
     return f"data: {json.dumps({'type': msg_type, **fields})}\n\n"
 
@@ -406,8 +426,9 @@ async def message_stream(data: MessageSchema):
                 if node not in STREAMING_NODES:
                     continue
                 chunk = event["data"]["chunk"]
-                if chunk.content:
-                    yield await sse_event("token", content=chunk.content)
+                token_text = _content_to_text(chunk.content)
+                if token_text:
+                    yield await sse_event("token", content=token_text)
 
             snapshot = await graph.aget_state(config)
             state = snapshot.values
