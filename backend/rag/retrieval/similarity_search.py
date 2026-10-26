@@ -17,8 +17,8 @@ def similarity_retreiver(query: str, TABLE_NAME: str = TABLE_NAME, top_k: int = 
     if model_used == 'gemini':
 
         query_embedding = query_embedding.embeddings[0].values
-
-    query_embedding = query_embedding.flatten().tolist()
+    else:
+        query_embedding = query_embedding.flatten().tolist()
 
     conn, cursor = db_connection(DB_CONNECTION_URL)
 
