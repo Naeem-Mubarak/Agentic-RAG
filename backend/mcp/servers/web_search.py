@@ -14,29 +14,36 @@ load_dotenv()
 
 
 def _get_freshness(query: str) -> str | None:
-    """
-    Detect explicit temporal intent and map it to Tavily's supported
-    relative time ranges.
-    """
+    """Detect explicit temporal intent for Tavily searches."""
     q = query.lower()
 
     if re.search(r"\b(today|right now|just now|as of today)\b", q):
         return "day"
-
     if re.search(r"\b(this week|this week'?s|past week|last week)\b", q):
         return "week"
-
     if re.search(r"\b(this month|past month|last month)\b", q):
         return "month"
-
-    if re.search(
-        r"\b(latest|most recent|newest|current|recent|recently|up[- ]to[- ]date)\b",
-        q,
-    ):
+    if re.search(r"\b(latest|most recent|newest|current|recent|recently|up[- ]to[- ]date)\b", q):
         return "year"
-
     return None
 
+
+def _build_search_query(query: str, freshness: str | None) -> str:
+    """Improve recall for freshness-sensitive model/release questions."""
+    search_query = query.strip()
+    if not freshness:
+        return search_query
+
+    current_year = date.today().year
+    if str(current_year) not in search_query:
+        search_query = f"{search_query} {current_year}"
+
+    q = search_query.lower()
+    if re.search(r"\b(model|models|llm|llms|release|released|launch|launched|launches)\b", q):
+        if not re.search(r"\b(release|released|launch|launched|launches)\b", q):
+            search_query = f"{search_query} latest AI model release"
+
+    return search_query
 
 @mcp.tool
 def websearch(query: str):
@@ -58,12 +65,7 @@ def websearch(query: str):
         )
 
     freshness = _get_freshness(query)
-    search_query = query.strip()
-
-    if freshness:
-        current_year = date.today().year
-        if str(current_year) not in search_query:
-            search_query = f"{search_query} {current_year}"
+    search_query = _build_search_query(query, freshness)
 
     websearch = TavilySearch(
         tavily_api_key=tavily_api_key,
