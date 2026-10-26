@@ -130,6 +130,9 @@ def _rank_results_for_query(query: str, results: list[dict]) -> list[dict]:
         reverse=True,
     )
 
+    if not dated:
+        return results
+
     # Keep the newest few candidates so generation can still compare them,
     # while preventing stale undated/old results from dominating the answer.
     return dated[:3]
@@ -168,10 +171,18 @@ async def web_search(
         seen_urls = set()
 
         for message in result["messages"]:
-            if not isinstance(message, ToolMessage):
+            is_tool_message = (
+                isinstance(message, ToolMessage)
+                or getattr(message, "type", None) == "tool"
+                or getattr(message, "tool_call_id", None) is not None
+            )
+
+            if not is_tool_message:
                 continue
 
-            results = _extract_results(message.content)
+            results = _extract_results(
+                getattr(message, "content", message)
+            )
 
             for content in results:
                 url = content.get("url")
