@@ -133,6 +133,17 @@ async function sendMessage(text) {
   }
 }
 
+function normalizeTokenContent(content) {
+  if (typeof content === "string") return content;
+  if (Array.isArray(content)) return content.map(normalizeTokenContent).join("");
+  if (content && typeof content === "object") {
+    if (typeof content.text === "string") return content.text;
+    if (content.content !== undefined) return normalizeTokenContent(content.content);
+  }
+  return "";
+}
+
+
 function handleServerMessage(data) {
   switch (data.type) {
     case "stage":
@@ -144,8 +155,11 @@ function handleServerMessage(data) {
         pendingAgentEl = renderMessageBubble("agent", "");
         pendingAgentText = "";
       }
-      pendingAgentText += data.content;
-      pendingAgentEl.textContent = pendingAgentText;
+      const tokenText = normalizeTokenContent(data.content);
+      if (tokenText) {
+        pendingAgentText += tokenText;
+        pendingAgentEl.textContent = pendingAgentText;
+      }
       scrollToBottom();
       break;
     case "message":
