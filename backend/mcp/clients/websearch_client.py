@@ -93,6 +93,47 @@ def _extract_results(value) -> list[dict]:
     )
 
 
+def _is_latest_query(query: str) -> bool:
+    q = query.lower()
+    return bool(
+        __import__("re").search(
+            r"\b(latest|most recent|newest)\b", q
+        )
+    )
+
+
+def _date_key(value) -> str:
+    if not value:
+        return ""
+    return str(value)[:10]
+
+
+def _rank_results_for_query(query: str, results: list[dict]) -> list[dict]:
+    """
+    Enforce deterministic freshness for latest/most-recent questions.
+
+    The LLM may rank results by semantic relevance, which can select an old
+    page over a newer release. For explicit latest queries, only dated results
+    are eligible and the newest dated results are passed downstream.
+    """
+    if not _is_latest_query(query):
+        return results
+
+    dated = [
+        item for item in results
+        if item.get("published_date")
+    ]
+
+    dated.sort(
+        key=lambda item: _date_key(item.get("published_date")),
+        reverse=True,
+    )
+
+    # Keep the newest few candidates so generation can still compare them,
+    # while preventing stale undated/old results from dominating the answer.
+    return dated[:3]
+
+
 async def web_search(
     state: Agent_state
 ) -> Command[Literal["knoweldge_refinement"]]:
@@ -122,8 +163,7 @@ async def web_search(
             ]
         })
 
-        source_title = []
-        websearch_docs = []
+        collected_results = []
         seen_urls = set()
 
         for message in result["messages"]:
@@ -134,33 +174,47 @@ async def web_search(
 
             for content in results:
                 url = content.get("url")
-                title = content.get("title")
-                text = content.get("content")
-                published_date = content.get("published_date")
-
-                if not url or not text:
-                    continue
-
-                if url in seen_urls:
+                text = content.get("content") or content.get("raw_content")
+                if not url or not text or url in seen_urls:
                     continue
 
                 seen_urls.add(url)
-
-                source_title.append({
-                    "source": url,
-                    "title": title or url,
-                    "published_date": published_date,
-                })
-
-                websearch_docs.append({
+                collected_results.append({
+                    "url": url,
+                    "title": content.get("title") or url,
                     "content": text,
-                    "source": url,
-                    "page_number": None,
-                    "metadata": {
-                        "title": title or url,
-                        "published_date": published_date,
-                    },
+                    "published_date": content.get("published_date"),
                 })
+
+        collected_results = _rank_results_for_query(
+            state["query"],
+            collected_results,
+        )
+
+        source_title = []
+        websearch_docs = []
+
+        for content in collected_results:
+            url = content["url"]
+            title = content["title"]
+            text = content["content"]
+            published_date = content.get("published_date")
+
+            source_title.append({
+                "source": url,
+                "title": title,
+                "published_date": published_date,
+            })
+
+            websearch_docs.append({
+                "content": text,
+                "source": url,
+                "page_number": None,
+                "metadata": {
+                    "title": title,
+                    "published_date": published_date,
+                },
+            })
 
         if not websearch_docs:
             raise RuntimeError(
