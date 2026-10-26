@@ -15,22 +15,40 @@ model = general_model()
 
 def _extract_results(value) -> list[dict]:
     """
-    Normalize MCP tool output into Tavily's results list.
+    Normalize the different content shapes that can arrive through MCP.
 
-    FastMCP/MCPAdapter can represent a returned Python dict as a text
-    content block, while other versions may expose the dict directly.
-    Never assume one transport representation.
+    The web-search server returns JSON text, but MCP clients may expose that
+    text as a string, a text content block, a list of content blocks, or
+    occasionally a decoded Python object.
     """
+    if isinstance(value, str):
+        try:
+            parsed = json.loads(value)
+        except json.JSONDecodeError as e:
+            raise ValueError(
+                f"Web search tool returned non-JSON text: {value[:500]}"
+            ) from e
+
+        return _extract_results(parsed)
+
     if isinstance(value, dict):
+        # Normal Tavily payload.
         if "results" in value:
             results = value["results"]
 
-            if isinstance(results, list):
-                return results
+            if not isinstance(results, list):
+                raise TypeError(
+                    "Web search returned a non-list 'results' field"
+                )
 
-            raise TypeError(
-                "Web search returned a non-list 'results' field"
-            )
+            return [
+                item for item in results
+                if isinstance(item, dict)
+            ]
+
+        # MCP text content block.
+        if value.get("type") == "text" and "text" in value:
+            return _extract_results(value["text"])
 
         if "error" in value:
             raise RuntimeError(
@@ -39,31 +57,33 @@ def _extract_results(value) -> list[dict]:
                 f"{value['error']}"
             )
 
+        # Some MCP wrappers use a nested content/text field.
         if "text" in value:
             return _extract_results(value["text"])
 
         if "content" in value:
             return _extract_results(value["content"])
 
+        # A single Tavily result can also arrive directly.
+        if value.get("url") and value.get("content"):
+            return [value]
+
         raise ValueError(
-            f"Web search tool returned an unexpected object. "
-            f"Expected 'results', got keys: {list(value.keys())}"
+            "Web search tool returned an unexpected object. "
+            f"Expected Tavily results, got keys: {list(value.keys())}"
         )
 
-    if isinstance(value, str):
-        try:
-            parsed = json.loads(value)
-        except json.JSONDecodeError as e:
-            raise ValueError(
-                f"Web search tool returned non-JSON text: {value[:300]}"
-            ) from e
-
-        return _extract_results(parsed)
-
     if isinstance(value, list):
+        # A list may be either:
+        # 1. MCP content blocks, or
+        # 2. Tavily result dictionaries.
         results = []
 
         for item in value:
+            if isinstance(item, dict) and item.get("url") and item.get("content"):
+                results.append(item)
+                continue
+
             results.extend(_extract_results(item))
 
         return results
@@ -76,12 +96,10 @@ def _extract_results(value) -> list[dict]:
 async def web_search(
     state: Agent_state
 ) -> Command[Literal["knoweldge_refinement"]]:
-
     """
     Run the web-search MCP agent and keep the actual web documents rather
     than the agent's natural-language summary.
     """
-
     server = websearch_server()
     local_server = Client(Path(server))
     adapter = MCPAdapter(local_server)
@@ -92,14 +110,14 @@ async def web_search(
         agent = create_agent(
             model,
             tools,
-            system_prompt=websearch_prompt
+            system_prompt=websearch_prompt,
         )
 
         result = await agent.ainvoke({
             "messages": [
                 {
                     "role": "user",
-                    "content": f"User Query: {state['query']}"
+                    "content": f"User Query: {state['query']}",
                 }
             ]
         })
@@ -115,9 +133,6 @@ async def web_search(
             results = _extract_results(message.content)
 
             for content in results:
-                if not isinstance(content, dict):
-                    continue
-
                 url = content.get("url")
                 title = content.get("title")
                 text = content.get("content")
@@ -126,9 +141,6 @@ async def web_search(
                 if not url or not text:
                     continue
 
-                # The agent is allowed to perform another search when the
-                # first one is insufficient. Prevent the same source from
-                # appearing multiple times in the final RAG context/UI.
                 if url in seen_urls:
                     continue
 
@@ -147,7 +159,7 @@ async def web_search(
                     "metadata": {
                         "title": title or url,
                         "published_date": published_date,
-                    }
+                    },
                 })
 
         if not websearch_docs:
@@ -160,5 +172,5 @@ async def web_search(
 
         return Command(
             update=state,
-            goto="knoweldge_refinement"
+            goto="knoweldge_refinement",
         )
