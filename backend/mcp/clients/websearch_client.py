@@ -8,6 +8,7 @@ from typing import Literal
 from fastmcp import Client
 from pathlib import Path
 import json
+import re
 
 
 model = general_model()
@@ -96,7 +97,7 @@ def _extract_results(value) -> list[dict]:
 def _is_latest_query(query: str) -> bool:
     q = query.lower()
     return bool(
-        __import__("re").search(
+        re.search(
             r"\b(latest|most recent|newest)\b", q
         )
     )
