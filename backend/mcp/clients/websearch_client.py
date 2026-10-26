@@ -10,36 +10,8 @@ from pathlib import Path
 import json
 
 
-
 model = general_model()
 
-
-async def web_search(state: Agent_state) -> Command[Literal['knoweldge_refinement']]:
-
-    """
-    Doing web search using websearch mcp server and fetching out the tool response instead of AI response because AI response is summary and Tool response is document fetched from sources
-    """
-
-    server = websearch_server()
-    local_server = Client(Path(server))
-    adapter = MCPAdapter(local_server)
-
-    async with adapter:
-
-        tools = await adapter.list_tools()
-        agent = create_agent(
-                    model,
-                    tools,
-                    system_prompt = websearch_prompt
-                )
-        result = await agent.ainvoke(({
-                "messages" : [
-                    {
-                        "role" : "user",
-                        "content" : f"""User Query: {state['query']}"""
-                    }
-                ]
-        }))
 
 def _extract_results(value) -> list[dict]:
     """
@@ -52,13 +24,18 @@ def _extract_results(value) -> list[dict]:
     if isinstance(value, dict):
         if "results" in value:
             results = value["results"]
+
             if isinstance(results, list):
                 return results
-            raise TypeError("Web search returned a non-list 'results' field")
+
+            raise TypeError(
+                "Web search returned a non-list 'results' field"
+            )
 
         if "error" in value:
             raise RuntimeError(
-                f"Web search tool failed: {value.get('error_type', 'UnknownError')}: "
+                f"Web search tool failed: "
+                f"{value.get('error_type', 'UnknownError')}: "
                 f"{value['error']}"
             )
 
@@ -80,12 +57,15 @@ def _extract_results(value) -> list[dict]:
             raise ValueError(
                 f"Web search tool returned non-JSON text: {value[:300]}"
             ) from e
+
         return _extract_results(parsed)
 
     if isinstance(value, list):
         results = []
+
         for item in value:
             results.extend(_extract_results(item))
+
         return results
 
     raise TypeError(
@@ -93,10 +73,42 @@ def _extract_results(value) -> list[dict]:
     )
 
 
+async def web_search(
+    state: Agent_state
+) -> Command[Literal["knoweldge_refinement"]]:
+
+    """
+    Run the web-search MCP agent and keep the actual web documents rather
+    than the agent's natural-language summary.
+    """
+
+    server = websearch_server()
+    local_server = Client(Path(server))
+    adapter = MCPAdapter(local_server)
+
+    async with adapter:
+        tools = await adapter.list_tools()
+
+        agent = create_agent(
+            model,
+            tools,
+            system_prompt=websearch_prompt
+        )
+
+        result = await agent.ainvoke({
+            "messages": [
+                {
+                    "role": "user",
+                    "content": f"User Query: {state['query']}"
+                }
+            ]
+        })
+
         source_title = []
         websearch_docs = []
+        seen_urls = set()
 
-        for message in result['messages']:
+        for message in result["messages"]:
             if not isinstance(message, ToolMessage):
                 continue
 
@@ -109,19 +121,33 @@ def _extract_results(value) -> list[dict]:
                 url = content.get("url")
                 title = content.get("title")
                 text = content.get("content")
+                published_date = content.get("published_date")
 
                 if not url or not text:
                     continue
 
+                # The agent is allowed to perform another search when the
+                # first one is insufficient. Prevent the same source from
+                # appearing multiple times in the final RAG context/UI.
+                if url in seen_urls:
+                    continue
+
+                seen_urls.add(url)
+
                 source_title.append({
                     "source": url,
-                    "title": title or url
+                    "title": title or url,
+                    "published_date": published_date,
                 })
+
                 websearch_docs.append({
                     "content": text,
                     "source": url,
                     "page_number": None,
-                    "metadata": {"title": title or url}
+                    "metadata": {
+                        "title": title or url,
+                        "published_date": published_date,
+                    }
                 })
 
         if not websearch_docs:
@@ -129,7 +155,10 @@ def _extract_results(value) -> list[dict]:
                 "Web search completed but returned no usable search results."
             )
 
-        state['web_sources'] = source_title
-        state['websearch'] = websearch_docs
+        state["web_sources"] = source_title
+        state["websearch"] = websearch_docs
 
-        return Command(update=state, goto='knoweldge_refinement')
+        return Command(
+            update=state,
+            goto="knoweldge_refinement"
+        )
